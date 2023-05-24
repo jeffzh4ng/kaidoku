@@ -1,4 +1,4 @@
-use std::io;
+use std::{collections::VecDeque, io};
 
 fn main() {
     println!(
@@ -33,7 +33,7 @@ fn main() {
     }
 }
 
-fn hex_decoder(s: &str) -> Result<DecodedHex, io::Error> {
+fn hex_decoder(s: &str) -> Result<HexToByteDecoder, io::Error> {
     if !s.is_ascii() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -41,22 +41,18 @@ fn hex_decoder(s: &str) -> Result<DecodedHex, io::Error> {
         ));
     }
 
-    // if s mod 3 != 0 {
-    // pad it zero one or two bytes of zero
-    // }
-
-    return Ok(DecodedHex {
+    return Ok(HexToByteDecoder {
         bytes: s.as_bytes(),
         index: 0,
     });
 }
 
-struct DecodedHex<'a> {
+struct HexToByteDecoder<'a> {
     bytes: &'a [u8],
     index: usize,
 }
 
-impl<'a> Iterator for DecodedHex<'a> {
+impl<'a> Iterator for HexToByteDecoder<'a> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -78,7 +74,13 @@ impl<'a> Iterator for DecodedHex<'a> {
     }
 }
 
-impl DecodedHex<'_> {
+impl ExactSizeIterator for HexToByteDecoder<'_> {
+    fn len(&self) -> usize {
+        self.bytes.len()
+    }
+}
+
+impl HexToByteDecoder<'_> {
     fn hex_to_nibble(&self, c: u8) -> u8 {
         match c {
             b'0' => 0x0,
@@ -102,7 +104,7 @@ impl DecodedHex<'_> {
     }
 }
 
-fn bytes_to_base64(decoded_hex: DecodedHex) -> String {
+fn bytes_to_base64(hex_to_byte_decoder: HexToByteDecoder) -> String {
     const B64_MAP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     fn three_bytes_to_four_b64s(three_bytes_packed: u32) -> Vec<char> {
@@ -122,10 +124,16 @@ fn bytes_to_base64(decoded_hex: DecodedHex) -> String {
     }
 
     let mut b64_chars = Vec::new();
+
+    // adding padding if required
+    let padding = hex_to_byte_decoder.len() % 3;
+    let mut bytes = Vec::with_capacity(padding + hex_to_byte_decoder.len());
+    bytes.extend(vec![0; padding]);
+    bytes.extend(hex_to_byte_decoder);
+
     // since each b64 character is 6 bits, we can parse four b64 characters from three bytes
     // thus, process bytes in groups of three
     // and merge three bytes = 24 bits into a u32
-    let bytes = decoded_hex.collect::<Vec<u8>>();
     for three_bytes in bytes.chunks(3) {
         let mut three_bytes_packed: u32 = 0;
         for b in three_bytes {

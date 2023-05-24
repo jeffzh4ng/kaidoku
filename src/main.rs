@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::io;
 
 fn main() {
     println!(
@@ -19,63 +19,98 @@ fn main() {
     println!("Set 1: Basics");
     println!("---");
     println!("1. convert hex to base64");
-    let hex = String::from("49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d");
-    let le_bytes = hex_to_bytes(&hex);
-    let b64 = bytes_to_base64(&le_bytes);
-
-    println!("input: {:?}", hex);
-    println!("output: {:?}", b64);
-    println!("---");
+    let hex = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d";
+    match hex_decoder(hex) {
+        Ok(decoder) => {
+            let b64 = bytes_to_base64(decoder);
+            println!("input: {:?}", hex);
+            println!("output: {:?}", b64);
+            println!("---");
+        }
+        Err(e) => {
+            println!("error: {:?}", e);
+        }
+    }
 }
 
-fn hex_to_bytes(s: &str) -> Vec<u8> {
-    let hex_map: HashMap<char, u8> = HashMap::from([
-        ('0', 0x0),
-        ('1', 0x1),
-        ('2', 0x2),
-        ('3', 0x3),
-        ('4', 0x4),
-        ('5', 0x5),
-        ('6', 0x6),
-        ('7', 0x7),
-        ('8', 0x8),
-        ('9', 0x9),
-        ('a', 0xA),
-        ('b', 0xB),
-        ('c', 0xC),
-        ('d', 0xD),
-        ('e', 0xE),
-        ('f', 0xF),
-    ]);
-
-    let hex_to_nibble = |c: &char| -> Option<&u8> { hex_map.get(c) };
-
-    let mut le_bs = Vec::new();
-    // process the hex-encoded string in chunks of 2
-    for le_w in s.chars().rev().collect::<Vec<char>>().chunks(2) {
-        // 1. reverse the reversed chunk for big endian ordering
-        let be_w = le_w.iter().rev().collect::<Vec<&char>>();
-
-        // 2. convert two hex-encoded chars into high and low nibbles
-        let high = hex_to_nibble(be_w[0]).unwrap();
-        let low = hex_to_nibble(be_w[1]).unwrap();
-
-        // 3. push the byte into the little-endian ordered byte vector
-        le_bs.push(high << 4 | low)
+fn hex_decoder(s: &str) -> Result<DecodedHex, io::Error> {
+    if !s.is_ascii() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Non-ASCII character found",
+        ));
     }
 
-    le_bs
+    // if s mod 3 != 0 {
+    // pad it zero one or two bytes of zero
+    // }
+
+    return Ok(DecodedHex {
+        bytes: s.as_bytes(),
+        index: 0,
+    });
 }
 
-fn bytes_to_base64(bytes: &[u8]) -> String {
+struct DecodedHex<'a> {
+    bytes: &'a [u8],
+    index: usize,
+}
+
+impl<'a> Iterator for DecodedHex<'a> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (bytes, i) = (self.bytes, self.index);
+
+        if i < bytes.len() {
+            let high_nibble = self.hex_to_nibble(bytes[i]);
+            let low_nibble = if i + 1 < bytes.len() {
+                self.hex_to_nibble(bytes[i + 1])
+            } else {
+                0b00000000
+            };
+
+            self.index += 2;
+            Some(high_nibble << 4 | low_nibble)
+        } else {
+            None
+        }
+    }
+}
+
+impl DecodedHex<'_> {
+    fn hex_to_nibble(&self, c: u8) -> u8 {
+        match c {
+            b'0' => 0x0,
+            b'1' => 0x1,
+            b'2' => 0x2,
+            b'3' => 0x3,
+            b'4' => 0x4,
+            b'5' => 0x5,
+            b'6' => 0x6,
+            b'7' => 0x7,
+            b'8' => 0x8,
+            b'9' => 0x9,
+            b'a' | b'A' => 0xA,
+            b'b' | b'B' => 0xB,
+            b'c' | b'C' => 0xC,
+            b'd' | b'D' => 0xD,
+            b'e' | b'E' => 0xE,
+            b'f' | b'F' => 0xF,
+            _ => panic!("invalid hex character"),
+        }
+    }
+}
+
+fn bytes_to_base64(decoded_hex: DecodedHex) -> String {
     const B64_MAP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    fn u32_to_four_b64s(w: u32) -> Vec<char> {
+    fn three_bytes_to_four_b64s(three_bytes_packed: u32) -> Vec<char> {
         let mask = 0b111111;
-        let one = w >> 18;
-        let two = (w >> 12) & mask;
-        let three = (w >> 6) & mask;
-        let four = w & mask;
+        let one = three_bytes_packed >> 18;
+        let two = (three_bytes_packed >> 12) & mask;
+        let three = (three_bytes_packed >> 6) & mask;
+        let four = three_bytes_packed & mask;
 
         // convert u32s to base64 chars
         let one = B64_MAP.chars().nth(one as usize).unwrap();
@@ -83,33 +118,27 @@ fn bytes_to_base64(bytes: &[u8]) -> String {
         let three = B64_MAP.chars().nth(three as usize).unwrap();
         let four = B64_MAP.chars().nth(four as usize).unwrap();
 
-        Vec::from([four, three, two, one])
+        Vec::from([one, two, three, four])
     }
 
-    let mut b64_string = VecDeque::new();
-
-    // process bytes in groups of three
-    for w in bytes.chunks(3) {
-        let mut three_bytes: Vec<u8> = Vec::from([0, 0, 0]);
-        for (i, b) in w.iter().enumerate() {
-            three_bytes[i] = *b;
+    let mut b64_chars = Vec::new();
+    // since each b64 character is 6 bits, we can parse four b64 characters from three bytes
+    // thus, process bytes in groups of three
+    // and merge three bytes = 24 bits into a u32
+    let bytes = decoded_hex.collect::<Vec<u8>>();
+    for three_bytes in bytes.chunks(3) {
+        let mut three_bytes_packed: u32 = 0;
+        for b in three_bytes {
+            three_bytes_packed <<= 8;
+            three_bytes_packed |= *b as u32;
         }
 
-        // merge three_bytes into a u32
-        let mut w: u32 = 0;
-        for (i, b) in three_bytes.iter().enumerate() {
-            w |= (*b as u32) << (i * 8);
-        }
+        // convert u32 (24 bits packed with 8 zeros on the left) into four base64 chars
+        let four_b64_chars = three_bytes_to_four_b64s(three_bytes_packed);
 
-        // convert u32 into four base64 chars, ordered little-endian
-        let four_b64_chars = u32_to_four_b64s(w);
-
-        // iterating in normal order is fine since four_b64_chars is little-endian
-        for b64_char in four_b64_chars {
-            b64_string.push_front(b64_char);
-        }
+        b64_chars.extend(four_b64_chars);
     }
 
     // convert b64 characters into String
-    b64_string.into_iter().collect()
+    b64_chars.into_iter().collect()
 }

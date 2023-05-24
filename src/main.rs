@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, io};
+use std::io;
 
 fn main() {
     println!(
@@ -19,17 +19,19 @@ fn main() {
     println!("Set 1: Basics");
     println!("---");
     println!("1. convert hex to base64");
-    let hex = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d";
-    match hex_decoder(hex) {
-        Ok(decoder) => {
-            let b64 = bytes_to_base64(decoder);
-            println!("input: {:?}", hex);
-            println!("output: {:?}", b64);
-            println!("---");
-        }
-        Err(e) => {
-            println!("error: {:?}", e);
-        }
+    let hex = "6d49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d";
+    if let Ok(hex_to_byte_decoder) = hex_decoder(hex) {
+        let byte_to_base64_encoder = ByteToBase64Encoder {
+            hex_to_byte_decoder,
+            index: 0,
+        };
+
+        let base64 = byte_to_base64_encoder
+            .into_iter()
+            .flatten()
+            .collect::<String>();
+
+        println!("{base64}");
     }
 }
 
@@ -104,10 +106,48 @@ impl HexToByteDecoder<'_> {
     }
 }
 
-fn bytes_to_base64(hex_to_byte_decoder: HexToByteDecoder) -> String {
-    const B64_MAP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+struct ByteToBase64Encoder<'a> {
+    hex_to_byte_decoder: HexToByteDecoder<'a>,
+    index: usize,
+}
 
-    fn three_bytes_to_four_b64s(three_bytes_packed: u32) -> Vec<char> {
+impl Iterator for ByteToBase64Encoder<'_> {
+    type Item = [char; 4];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // add padding if required
+        let padding = if self.index == 0 {
+            self.hex_to_byte_decoder.len() % 3
+        } else {
+            0
+        };
+
+        let mut three_bytes_packed = 0;
+        for _ in 0..padding {
+            three_bytes_packed <<= 8;
+        }
+
+        // since each b64 character is 6 bits, we can parse four b64 characters from three bytes
+        // thus, process bytes in groups of three
+        // and merge three bytes = 24 bits into a u32
+
+        for _ in 0..3 - padding {
+            let byte = self.hex_to_byte_decoder.next()?;
+            three_bytes_packed <<= 8;
+            three_bytes_packed |= byte as u32;
+        }
+
+        // convert u32 (24 bits packed with 8 zeros on the left) into four base64 chars
+        let four_b64_chars = self.three_bytes_to_four_b64s(three_bytes_packed);
+
+        self.index += 1;
+        Some(four_b64_chars)
+    }
+}
+
+const B64_MAP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+impl ByteToBase64Encoder<'_> {
+    fn three_bytes_to_four_b64s(&self, three_bytes_packed: u32) -> [char; 4] {
         let mask = 0b111111;
         let one = three_bytes_packed >> 18;
         let two = (three_bytes_packed >> 12) & mask;
@@ -120,33 +160,6 @@ fn bytes_to_base64(hex_to_byte_decoder: HexToByteDecoder) -> String {
         let three = B64_MAP.chars().nth(three as usize).unwrap();
         let four = B64_MAP.chars().nth(four as usize).unwrap();
 
-        Vec::from([one, two, three, four])
+        [one, two, three, four]
     }
-
-    let mut b64_chars = Vec::new();
-
-    // adding padding if required
-    let padding = hex_to_byte_decoder.len() % 3;
-    let mut bytes = Vec::with_capacity(padding + hex_to_byte_decoder.len());
-    bytes.extend(vec![0; padding]);
-    bytes.extend(hex_to_byte_decoder);
-
-    // since each b64 character is 6 bits, we can parse four b64 characters from three bytes
-    // thus, process bytes in groups of three
-    // and merge three bytes = 24 bits into a u32
-    for three_bytes in bytes.chunks(3) {
-        let mut three_bytes_packed: u32 = 0;
-        for b in three_bytes {
-            three_bytes_packed <<= 8;
-            three_bytes_packed |= *b as u32;
-        }
-
-        // convert u32 (24 bits packed with 8 zeros on the left) into four base64 chars
-        let four_b64_chars = three_bytes_to_four_b64s(three_bytes_packed);
-
-        b64_chars.extend(four_b64_chars);
-    }
-
-    // convert b64 characters into String
-    b64_chars.into_iter().collect()
 }

@@ -42,6 +42,15 @@ impl<'a> HexToByteDecoder<'a> {
             ));
         }
 
+        for c in s.chars() {
+            if !c.is_ascii_hexdigit() {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Invalid hex character found",
+                ));
+            }
+        }
+
         return Ok(HexToByteDecoder {
             bytes: s.as_bytes(),
             index: 0,
@@ -133,5 +142,110 @@ impl<'a> ByteToBase64Encoder<'a> {
         let four = B64_MAP.chars().nth(four as usize).unwrap();
 
         [one, two, three, four]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hex_decoder_invalid_ascii() {
+        let input = "こんにちは";
+        assert!(HexToByteDecoder::new(input).is_err());
+    }
+
+    #[test]
+    fn hex_decoder_invalid_hex() {
+        let input = "6G";
+        assert!(HexToByteDecoder::new(input).is_err());
+    }
+
+    #[test]
+    fn hex_decoder_zero_bytes() {
+        let input = "";
+        let decoder = HexToByteDecoder::new(input).unwrap();
+        let actual_output = decoder.collect::<Vec<u8>>();
+        let expected_output: Vec<u8> = Vec::new();
+
+        assert_eq!(expected_output, actual_output);
+    }
+
+    #[test]
+    fn hex_decoder_one_byte() {
+        let input = "6d";
+        let decoder = HexToByteDecoder::new(input).unwrap();
+        let actual_output = decoder.collect::<Vec<u8>>();
+        let expected_output = Vec::from([0x6d]);
+
+        assert_eq!(expected_output, actual_output);
+    }
+
+    #[test]
+    fn hex_decoder_two_bytes() {
+        let input = "6f6d";
+        let decoder = HexToByteDecoder::new(input).unwrap();
+        let actual_output = decoder.collect::<Vec<u8>>();
+        let expected_output = Vec::from([0x6f, 0x6d]);
+
+        assert_eq!(expected_output, actual_output);
+    }
+
+    #[test]
+    fn hex_decoder_three_bytes() {
+        let input = "6f6f6d";
+        let decoder = HexToByteDecoder::new(input).unwrap();
+        let actual_output = decoder.collect::<Vec<u8>>();
+        let expected_output = Vec::from([0x6f, 0x6f, 0x6d]);
+
+        assert_eq!(expected_output, actual_output);
+    }
+
+    #[test]
+    fn base64_encoder_zero_byte() {
+        let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("").unwrap());
+        let actual_output = encoder.flatten().collect::<String>();
+        let expected_output = "";
+
+        assert_eq!(expected_output, actual_output);
+    }
+
+    #[test]
+    fn base64_encoder_one_byte() {
+        let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("6d").unwrap());
+        let actual_output = encoder.flatten().collect::<String>();
+        let expected_output = "AABt";
+
+        assert_eq!(expected_output, actual_output);
+    }
+
+    #[test]
+    fn base64_encoder_two_bytes() {
+        let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("6f6d").unwrap());
+        let actual_output = encoder.flatten().collect::<String>();
+        let expected_output = "AG9t";
+
+        assert_eq!(expected_output, actual_output);
+    }
+
+    #[test]
+    fn base64_encoder_three_bytes() {
+        let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("6f6f6d").unwrap());
+        let actual_output = encoder.flatten().collect::<String>();
+        let expected_output = "b29t";
+
+        assert_eq!(expected_output, actual_output);
+    }
+
+    #[test]
+    fn base64_encoder_many_bytes() {
+        let input = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d";
+        let expected_output = "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t";
+
+        let actual_output = ByteToBase64Encoder::new(HexToByteDecoder::new(input).unwrap())
+            .flatten()
+            .collect::<String>();
+
+        assert_eq!(expected_output, actual_output);
     }
 }

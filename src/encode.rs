@@ -80,6 +80,56 @@ impl<'a> HexToByteDecoder<'a> {
     }
 }
 
+pub struct ByteToHexEncoder<I> {
+    input: I,
+    output: [Option<char>; 1],
+}
+
+impl<I> ByteToHexEncoder<I>
+where
+    I: Iterator<Item = u8>,
+{
+    pub fn new(bytes: I) -> Self {
+        ByteToHexEncoder {
+            input: bytes,
+            output: [None; 1],
+        }
+    }
+}
+
+impl<I> Iterator for ByteToHexEncoder<I>
+where
+    I: Iterator<Item = u8>,
+{
+    type Item = char;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(c) = self.output.iter_mut().find_map(|c| c.take()) {
+            // return the next character from the output buffer, if any are present.
+            return Some(c);
+        }
+
+        if let Some(byte) = self.input.next() {
+            let high_nibble = byte >> 4;
+            let low_nibble = byte & 0b00001111;
+
+            self.output = [Some(self.nibble_to_hex_char(low_nibble))];
+            Some(self.nibble_to_hex_char(high_nibble))
+        } else {
+            None
+        }
+    }
+}
+
+const HEX_CHARS: &[char] = &[
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
+];
+impl<I> ByteToHexEncoder<I> {
+    fn nibble_to_hex_char(&self, nibble: u8) -> char {
+        assert!(nibble < 16);
+        HEX_CHARS[nibble as usize]
+    }
+}
+
 pub struct ByteToBase64Encoder<'a> {
     hex_to_byte_decoder: HexToByteDecoder<'a>,
     index: usize,

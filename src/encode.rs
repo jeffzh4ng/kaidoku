@@ -33,7 +33,12 @@ where
 
         Ok(HexToByteDecoder { input })
     }
+}
 
+impl<I> HexToByteDecoder<I>
+where
+    I: Iterator<Item = char>,
+{
     fn hex_to_nibble(&self, c: u8) -> u8 {
         match c {
             b'0' => 0x0,
@@ -59,7 +64,7 @@ where
 
 impl<I> Iterator for HexToByteDecoder<I>
 where
-    I: Iterator<Item = char> + Clone,
+    I: Iterator<Item = char>,
 {
     type Item = u8;
 

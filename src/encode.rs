@@ -89,30 +89,36 @@ impl Iterator for ByteToBase64Encoder<'_> {
     type Item = [char; 4];
 
     fn next(&mut self) -> Option<Self::Item> {
-        // add padding if required
-        let padding = if self.index == 0 {
-            self.hex_to_byte_decoder.len() % 3
-        } else {
-            0
-        };
-
-        let mut three_bytes_packed = 0;
-        for _ in 0..padding {
-            three_bytes_packed <<= 8;
-        }
-
-        // since each b64 character is 6 bits, we can parse four b64 characters from three bytes
+        // since each b64 character is 6 bits, we can parse four b64 characters from three bytes (24 bits)
         // thus, process bytes in groups of three
         // and merge three bytes = 24 bits into a u32
+        let mut three_bytes_packed = 0;
+        let mut byte_count = 0;
+        for _ in 0..3 {
+            if let Some(byte) = self.hex_to_byte_decoder.next() {
+                three_bytes_packed <<= 8;
+                three_bytes_packed |= byte as u32;
+                byte_count += 1;
+            } else {
+                // if the decoder was empty to begin with, return None
+                if byte_count == 0 {
+                    return None;
+                }
 
-        for _ in 0..3 - padding {
-            let byte = self.hex_to_byte_decoder.next()?;
-            three_bytes_packed <<= 8;
-            three_bytes_packed |= byte as u32;
+                // o/w, shift the bits to the left
+                // this is bc three_bytes_to_four_b64s expects 24 bits packed into a u32
+                // kind of hacky but ¯\_(ツ)_/¯
+                for _ in 0..(3 - byte_count) {
+                    three_bytes_packed <<= 8;
+                }
+
+                // and then continue with the bytes we have
+                break;
+            }
         }
 
         // convert u32 (24 bits packed with 8 zeros on the left) into four base64 chars
-        let four_b64_chars = self.three_bytes_to_four_b64s(three_bytes_packed);
+        let four_b64_chars = self.three_bytes_to_four_b64s(three_bytes_packed, byte_count);
 
         self.index += 1;
         Some(four_b64_chars)
@@ -128,7 +134,7 @@ impl<'a> ByteToBase64Encoder<'a> {
         }
     }
 
-    fn three_bytes_to_four_b64s(&self, three_bytes_packed: u32) -> [char; 4] {
+    fn three_bytes_to_four_b64s(&self, three_bytes_packed: u32, byte_count: i32) -> [char; 4] {
         let mask = 0b111111;
         let one = three_bytes_packed >> 18;
         let two = (three_bytes_packed >> 12) & mask;
@@ -141,7 +147,16 @@ impl<'a> ByteToBase64Encoder<'a> {
         let three = B64_MAP.chars().nth(three as usize).unwrap();
         let four = B64_MAP.chars().nth(four as usize).unwrap();
 
-        [one, two, three, four]
+        // pad with '=' if necessary
+        let mut four_b64_chars = [one, two, three, four];
+        if byte_count == 1 {
+            four_b64_chars[2] = '=';
+            four_b64_chars[3] = '=';
+        } else if byte_count == 2 {
+            four_b64_chars[3] = '=';
+        }
+
+        four_b64_chars
     }
 }
 
@@ -214,7 +229,7 @@ mod tests {
     fn base64_encoder_one_byte() {
         let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("6d").unwrap());
         let actual_output = encoder.flatten().collect::<String>();
-        let expected_output = "AABt";
+        let expected_output = "bQ==";
 
         assert_eq!(expected_output, actual_output);
     }
@@ -223,7 +238,7 @@ mod tests {
     fn base64_encoder_two_bytes() {
         let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("6f6d").unwrap());
         let actual_output = encoder.flatten().collect::<String>();
-        let expected_output = "AG9t";
+        let expected_output = "b20=";
 
         assert_eq!(expected_output, actual_output);
     }

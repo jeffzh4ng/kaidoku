@@ -1,40 +1,20 @@
 use std::io;
 
-pub struct HexToByteDecoder<'a> {
-    bytes: &'a [u8],
-    index: usize,
+pub struct HexToByteDecoder<I>
+where
+    I: Iterator<Item = char>,
+{
+    input: I,
 }
 
-impl<'a> Iterator for HexToByteDecoder<'a> {
-    type Item = u8;
+impl<I> HexToByteDecoder<I>
+where
+    I: Iterator<Item = char> + Clone,
+{
+    pub fn new(input: I) -> Result<Self, io::Error> {
+        // collecting now so we can perform validation before instantiation
+        let s = input.clone().collect::<String>();
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let (bytes, i) = (self.bytes, self.index);
-
-        if i < bytes.len() {
-            let high_nibble = self.hex_to_nibble(bytes[i]);
-            let low_nibble = if i + 1 < bytes.len() {
-                self.hex_to_nibble(bytes[i + 1])
-            } else {
-                0b00000000
-            };
-
-            self.index += 2;
-            Some(high_nibble << 4 | low_nibble)
-        } else {
-            None
-        }
-    }
-}
-
-impl ExactSizeIterator for HexToByteDecoder<'_> {
-    fn len(&self) -> usize {
-        self.bytes.len()
-    }
-}
-
-impl<'a> HexToByteDecoder<'a> {
-    pub fn new(s: &'a str) -> Result<Self, io::Error> {
         if !s.is_ascii() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
@@ -51,10 +31,7 @@ impl<'a> HexToByteDecoder<'a> {
             }
         }
 
-        return Ok(HexToByteDecoder {
-            bytes: s.as_bytes(),
-            index: 0,
-        });
+        Ok(HexToByteDecoder { input })
     }
 
     fn hex_to_nibble(&self, c: u8) -> u8 {
@@ -76,6 +53,28 @@ impl<'a> HexToByteDecoder<'a> {
             b'e' | b'E' => 0xE,
             b'f' | b'F' => 0xF,
             _ => panic!("invalid hex character"),
+        }
+    }
+}
+
+impl<I> Iterator for HexToByteDecoder<I>
+where
+    I: Iterator<Item = char> + Clone,
+{
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(c) = self.input.next() {
+            let high_nibble = self.hex_to_nibble(c as u8); // TODO: verify this cast is correct
+            let low_nibble = if let Some(c) = self.input.next() {
+                self.hex_to_nibble(c as u8)
+            } else {
+                0b00000000
+            };
+
+            Some(high_nibble << 4 | low_nibble)
+        } else {
+            None
         }
     }
 }
@@ -130,12 +129,18 @@ impl<I> ByteToHexEncoder<I> {
     }
 }
 
-pub struct ByteToBase64Encoder<'a> {
-    hex_to_byte_decoder: HexToByteDecoder<'a>,
+pub struct ByteToBase64Encoder<I>
+where
+    I: Iterator<Item = u8>,
+{
+    input: I,
     index: usize,
 }
 
-impl Iterator for ByteToBase64Encoder<'_> {
+impl<I> Iterator for ByteToBase64Encoder<I>
+where
+    I: Iterator<Item = u8>,
+{
     type Item = [char; 4];
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -145,7 +150,7 @@ impl Iterator for ByteToBase64Encoder<'_> {
         let mut three_bytes_packed = 0;
         let mut byte_count = 0;
         for _ in 0..3 {
-            if let Some(byte) = self.hex_to_byte_decoder.next() {
+            if let Some(byte) = self.input.next() {
                 three_bytes_packed <<= 8;
                 three_bytes_packed |= byte as u32;
                 byte_count += 1;
@@ -176,12 +181,12 @@ impl Iterator for ByteToBase64Encoder<'_> {
 }
 
 const B64_MAP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-impl<'a> ByteToBase64Encoder<'a> {
-    pub fn new(hex_to_byte_decoder: HexToByteDecoder<'a>) -> Self {
-        ByteToBase64Encoder {
-            hex_to_byte_decoder,
-            index: 0,
-        }
+impl<I> ByteToBase64Encoder<I>
+where
+    I: Iterator<Item = u8>,
+{
+    pub fn new(input: I) -> Self {
+        ByteToBase64Encoder { input, index: 0 }
     }
 
     fn three_bytes_to_four_b64s(&self, three_bytes_packed: u32, byte_count: i32) -> [char; 4] {
@@ -217,19 +222,19 @@ mod tests {
     #[test]
     fn hex_decoder_invalid_ascii() {
         let input = "こんにちは";
-        assert!(HexToByteDecoder::new(input).is_err());
+        assert!(HexToByteDecoder::new(input.chars()).is_err());
     }
 
     #[test]
     fn hex_decoder_invalid_hex() {
         let input = "6G";
-        assert!(HexToByteDecoder::new(input).is_err());
+        assert!(HexToByteDecoder::new(input.chars()).is_err());
     }
 
     #[test]
     fn hex_decoder_zero_bytes() {
         let input = "";
-        let decoder = HexToByteDecoder::new(input).unwrap();
+        let decoder = HexToByteDecoder::new(input.chars()).unwrap();
         let actual_output = decoder.collect::<Vec<u8>>();
         let expected_output: Vec<u8> = Vec::new();
 
@@ -239,7 +244,7 @@ mod tests {
     #[test]
     fn hex_decoder_one_byte() {
         let input = "6d";
-        let decoder = HexToByteDecoder::new(input).unwrap();
+        let decoder = HexToByteDecoder::new(input.chars()).unwrap();
         let actual_output = decoder.collect::<Vec<u8>>();
         let expected_output = Vec::from([0x6d]);
 
@@ -249,7 +254,7 @@ mod tests {
     #[test]
     fn hex_decoder_two_bytes() {
         let input = "6f6d";
-        let decoder = HexToByteDecoder::new(input).unwrap();
+        let decoder = HexToByteDecoder::new(input.chars()).unwrap();
         let actual_output = decoder.collect::<Vec<u8>>();
         let expected_output = Vec::from([0x6f, 0x6d]);
 
@@ -259,7 +264,7 @@ mod tests {
     #[test]
     fn hex_decoder_three_bytes() {
         let input = "6f6f6d";
-        let decoder = HexToByteDecoder::new(input).unwrap();
+        let decoder = HexToByteDecoder::new(input.chars()).unwrap();
         let actual_output = decoder.collect::<Vec<u8>>();
         let expected_output = Vec::from([0x6f, 0x6f, 0x6d]);
 
@@ -268,7 +273,7 @@ mod tests {
 
     #[test]
     fn base64_encoder_zero_byte() {
-        let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("").unwrap());
+        let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("".chars()).unwrap());
         let actual_output = encoder.flatten().collect::<String>();
         let expected_output = "";
 
@@ -277,8 +282,11 @@ mod tests {
 
     #[test]
     fn base64_encoder_one_byte() {
-        let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("6d").unwrap());
-        let actual_output = encoder.flatten().collect::<String>();
+        let input = "6d";
+        let hex_decoder = HexToByteDecoder::new(input.chars()).unwrap();
+        let base64_encoder = ByteToBase64Encoder::new(hex_decoder);
+
+        let actual_output = base64_encoder.flatten().collect::<String>();
         let expected_output = "bQ==";
 
         assert_eq!(expected_output, actual_output);
@@ -286,8 +294,11 @@ mod tests {
 
     #[test]
     fn base64_encoder_two_bytes() {
-        let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("6f6d").unwrap());
-        let actual_output = encoder.flatten().collect::<String>();
+        let input = "6f6d";
+        let hex_decoder = HexToByteDecoder::new(input.chars()).unwrap();
+        let base64_encoder = ByteToBase64Encoder::new(hex_decoder);
+
+        let actual_output = base64_encoder.flatten().collect::<String>();
         let expected_output = "b20=";
 
         assert_eq!(expected_output, actual_output);
@@ -295,8 +306,11 @@ mod tests {
 
     #[test]
     fn base64_encoder_three_bytes() {
-        let encoder = ByteToBase64Encoder::new(HexToByteDecoder::new("6f6f6d").unwrap());
-        let actual_output = encoder.flatten().collect::<String>();
+        let input = "6f6f6d";
+        let hex_decoder = HexToByteDecoder::new(input.chars()).unwrap();
+        let base64_encoder = ByteToBase64Encoder::new(hex_decoder);
+
+        let actual_output = base64_encoder.flatten().collect::<String>();
         let expected_output = "b29t";
 
         assert_eq!(expected_output, actual_output);
@@ -305,11 +319,12 @@ mod tests {
     #[test]
     fn base64_encoder_many_bytes() {
         let input = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d";
-        let expected_output = "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t";
 
-        let actual_output = ByteToBase64Encoder::new(HexToByteDecoder::new(input).unwrap())
-            .flatten()
-            .collect::<String>();
+        let hex_decoder = HexToByteDecoder::new(input.chars()).unwrap();
+        let base64_encoder = ByteToBase64Encoder::new(hex_decoder);
+
+        let actual_output = base64_encoder.flatten().collect::<String>();
+        let expected_output = "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t";
 
         assert_eq!(expected_output, actual_output);
     }

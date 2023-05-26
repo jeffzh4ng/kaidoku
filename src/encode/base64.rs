@@ -4,15 +4,21 @@ where
 {
     input: I,
     index: usize,
+    output: [Option<char>; 3],
 }
 
 impl<I> Iterator for ByteToBase64Encoder<I>
 where
     I: Iterator<Item = u8>,
 {
-    type Item = [char; 4];
+    type Item = char;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if let Some(c) = self.output.iter_mut().find_map(|c| c.take()) {
+            // return the next character from the output buffer, if any are present.
+            return Some(c);
+        }
+
         // since each b64 character is 6 bits, we can parse four b64 characters from three bytes (24 bits)
         // thus, process bytes in groups of three
         // and merge three bytes = 24 bits into a u32
@@ -43,9 +49,14 @@ where
 
         // convert u32 (24 bits packed with 8 zeros on the left) into four base64 chars
         let four_b64_chars = self.three_bytes_to_four_b64s(three_bytes_packed, byte_count);
+        self.output = [
+            Some(four_b64_chars[1]),
+            Some(four_b64_chars[2]),
+            Some(four_b64_chars[3]),
+        ];
 
         self.index += 1;
-        Some(four_b64_chars)
+        Some(four_b64_chars[0])
     }
 }
 
@@ -55,7 +66,11 @@ where
     I: Iterator<Item = u8>,
 {
     pub fn new(input: I) -> Self {
-        ByteToBase64Encoder { input, index: 0 }
+        ByteToBase64Encoder {
+            input,
+            index: 0,
+            output: [None; 3],
+        }
     }
 
     fn three_bytes_to_four_b64s(&self, three_bytes_packed: u32, byte_count: i32) -> [char; 4] {
@@ -99,7 +114,7 @@ mod tests {
             .into_iter();
 
         let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
-        let actual_output = base64_encoder.flatten().collect::<String>();
+        let actual_output = base64_encoder.collect::<String>();
         let expected_output = "";
 
         assert_eq!(expected_output, actual_output);
@@ -115,7 +130,7 @@ mod tests {
 
         let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
 
-        let actual_output = base64_encoder.flatten().collect::<String>();
+        let actual_output = base64_encoder.collect::<String>();
         let expected_output = "bQ==";
 
         assert_eq!(expected_output, actual_output);
@@ -131,7 +146,7 @@ mod tests {
 
         let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
 
-        let actual_output = base64_encoder.flatten().collect::<String>();
+        let actual_output = base64_encoder.collect::<String>();
         let expected_output = "b20=";
 
         assert_eq!(expected_output, actual_output);
@@ -147,7 +162,7 @@ mod tests {
 
         let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
 
-        let actual_output = base64_encoder.flatten().collect::<String>();
+        let actual_output = base64_encoder.collect::<String>();
         let expected_output = "b29t";
 
         assert_eq!(expected_output, actual_output);
@@ -164,7 +179,7 @@ mod tests {
 
         let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
 
-        let actual_output = base64_encoder.flatten().collect::<String>();
+        let actual_output = base64_encoder.collect::<String>();
         let expected_output = "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t";
 
         assert_eq!(expected_output, actual_output);

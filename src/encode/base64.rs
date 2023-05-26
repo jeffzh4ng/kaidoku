@@ -86,14 +86,20 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::io;
+
     use crate::encode::{base64, hex};
 
     #[test]
     fn base64_encoder_zero_byte() {
         let input = "";
-        let encoder =
-            base64::ByteToBase64Encoder::new(hex::HexToByteDecoder::new(input.chars()).unwrap());
-        let actual_output = encoder.flatten().collect::<String>();
+        let hex_decoder = hex::HexToByteDecoder::new(input.chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap()
+            .into_iter();
+
+        let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
+        let actual_output = base64_encoder.flatten().collect::<String>();
         let expected_output = "";
 
         assert_eq!(expected_output, actual_output);
@@ -102,7 +108,11 @@ mod tests {
     #[test]
     fn base64_encoder_one_byte() {
         let input = "6d";
-        let hex_decoder = hex::HexToByteDecoder::new(input.chars()).unwrap();
+        let hex_decoder = hex::HexToByteDecoder::new(input.chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap()
+            .into_iter();
+
         let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
 
         let actual_output = base64_encoder.flatten().collect::<String>();
@@ -114,7 +124,11 @@ mod tests {
     #[test]
     fn base64_encoder_two_bytes() {
         let input = "6f6d";
-        let hex_decoder = hex::HexToByteDecoder::new(input.chars()).unwrap();
+        let hex_decoder = hex::HexToByteDecoder::new(input.chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap()
+            .into_iter();
+
         let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
 
         let actual_output = base64_encoder.flatten().collect::<String>();
@@ -126,7 +140,11 @@ mod tests {
     #[test]
     fn base64_encoder_three_bytes() {
         let input = "6f6f6d";
-        let hex_decoder = hex::HexToByteDecoder::new(input.chars()).unwrap();
+        let hex_decoder = hex::HexToByteDecoder::new(input.chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap()
+            .into_iter();
+
         let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
 
         let actual_output = base64_encoder.flatten().collect::<String>();
@@ -139,7 +157,11 @@ mod tests {
     fn base64_encoder_many_bytes() {
         let input = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d";
 
-        let hex_decoder = hex::HexToByteDecoder::new(input.chars()).unwrap();
+        let hex_decoder = hex::HexToByteDecoder::new(input.chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap()
+            .into_iter();
+
         let base64_encoder = base64::ByteToBase64Encoder::new(hex_decoder);
 
         let actual_output = base64_encoder.flatten().collect::<String>();

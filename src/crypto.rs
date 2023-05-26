@@ -38,10 +38,15 @@ mod tests {
 
     #[test]
     fn xor_cipher_sanity_check() {
-        let hex_decoder_a =
-            HexToByteDecoder::new("1c0111001f010100061a024b53535009181c".chars()).unwrap();
-        let hex_decoder_b =
-            HexToByteDecoder::new("686974207468652062756c6c277320657965".chars()).unwrap();
+        let hex_decoder_a = HexToByteDecoder::new("1c0111001f010100061a024b53535009181c".chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap()
+            .into_iter();
+
+        let hex_decoder_b = HexToByteDecoder::new("686974207468652062756c6c277320657965".chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap()
+            .into_iter();
 
         let xor_cipher = XorCipher::new(hex_decoder_a, hex_decoder_b);
         let actual_output = xor_cipher.collect::<Vec<u8>>();

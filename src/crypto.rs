@@ -1,9 +1,11 @@
+use std::{io, iter};
+
 struct XorCipher<I>
 where
     I: Iterator<Item = u8>,
 {
-    input_a: I,
-    input_b: I,
+    input_a: iter::Peekable<I>,
+    input_b: iter::Peekable<I>,
 }
 
 impl<I> XorCipher<I>
@@ -11,7 +13,10 @@ where
     I: Iterator<Item = u8>,
 {
     fn new(input_a: I, input_b: I) -> Self {
-        XorCipher { input_a, input_b }
+        XorCipher {
+            input_a: input_a.peekable(),
+            input_b: input_b.peekable(),
+        }
     }
 }
 
@@ -19,12 +24,19 @@ impl<I> Iterator for XorCipher<I>
 where
     I: Iterator<Item = u8>,
 {
-    type Item = u8;
+    type Item = Result<u8, io::Error>;
     fn next(&mut self) -> Option<Self::Item> {
-        if let (Some(a), Some(b)) = (self.input_a.next(), self.input_b.next()) {
-            Some(a ^ b)
-        } else {
+        if self.input_a.peek().is_some() && self.input_b.peek().is_some() {
+            let a = self.input_a.next().unwrap();
+            let b = self.input_b.next().unwrap();
+            Some(Ok(a ^ b))
+        } else if self.input_a.peek().is_none() && self.input_b.peek().is_none() {
             None
+        } else {
+            Some(Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Uneven length",
+            )))
         }
     }
 }
@@ -49,7 +61,7 @@ mod tests {
             .into_iter();
 
         let xor_cipher = XorCipher::new(hex_decoder_a, hex_decoder_b);
-        let actual_output = xor_cipher.collect::<Vec<u8>>();
+        let actual_output = xor_cipher.collect::<Result<Vec<u8>, io::Error>>().unwrap();
         let actual_output_hex = hex::ByteToHexEncoder::new(actual_output.into_iter());
 
         let expected_output_hex = "746865206b696420646f6e277420706c6179";
@@ -59,5 +71,22 @@ mod tests {
                 .collect::<Result<String, io::Error>>()
                 .unwrap()
         )
+    }
+    #[test]
+    fn xor_cipher_uneven_length() {
+        let hex_decoder_a = HexToByteDecoder::new("F0".chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap()
+            .into_iter();
+
+        let hex_decoder_b = HexToByteDecoder::new("0FF".chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap()
+            .into_iter();
+
+        let xor_cipher = XorCipher::new(hex_decoder_a, hex_decoder_b);
+        let actual_output = xor_cipher.collect::<Result<Vec<u8>, io::Error>>();
+
+        assert!(actual_output.is_err());
     }
 }

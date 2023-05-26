@@ -207,4 +207,19 @@ mod tests {
         let expected_output = "6d";
         assert_eq!(expected_output, actual_output);
     }
+
+    #[test]
+    fn hex_encoder_two_bytes() {
+        let two_bytes = [
+            u8::from_str_radix("6f", 16).unwrap(),
+            u8::from_str_radix("6d", 16).unwrap(),
+        ];
+        let input = two_bytes.iter().cloned();
+
+        let encoder = ByteToHexEncoder::new(input);
+        let actual_output = encoder.collect::<Result<String, io::Error>>().unwrap();
+
+        let expected_output = "6f6d";
+        assert_eq!(expected_output, actual_output);
+    }
 }

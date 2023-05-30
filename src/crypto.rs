@@ -1,6 +1,6 @@
 use std::{io, iter};
 
-struct XorCipher<I>
+pub struct XorCipher<I>
 where
     I: Iterator<Item = u8>,
 {
@@ -12,7 +12,7 @@ impl<I> XorCipher<I>
 where
     I: Iterator<Item = u8>,
 {
-    fn new(input_a: I, input_b: I) -> Self {
+    pub fn new(input_a: I, input_b: I) -> Self {
         XorCipher {
             input_a: input_a.peekable(),
             input_b: input_b.peekable(),

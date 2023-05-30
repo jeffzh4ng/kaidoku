@@ -60,6 +60,7 @@ where
     }
 }
 
+// TODO: store as bytes instead of chars because input is ascii. then the code below does not need to use .chars()
 const B64_MAP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 impl<I> ByteToBase64Encoder<I>
 where

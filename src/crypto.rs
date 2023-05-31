@@ -5,8 +5,8 @@ where
     I: Iterator<Item = u8>,
     J: Iterator<Item = u8>,
 {
-    input_a: iter::Peekable<I>,
-    input_b: iter::Peekable<J>,
+    a: iter::Peekable<I>,
+    b: iter::Peekable<J>,
 }
 
 impl<I, J> XorCipher<I, J>
@@ -14,10 +14,10 @@ where
     I: Iterator<Item = u8>,
     J: Iterator<Item = u8>,
 {
-    pub fn new(input_a: I, input_b: J) -> Self {
+    pub fn new(a: I, b: J) -> Self {
         XorCipher {
-            input_a: input_a.peekable(),
-            input_b: input_b.peekable(),
+            a: a.peekable(),
+            b: b.peekable(),
         }
     }
 }
@@ -29,11 +29,11 @@ where
 {
     type Item = Result<u8, io::Error>;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.input_a.peek().is_some() && self.input_b.peek().is_some() {
-            let a = self.input_a.next().unwrap();
-            let b = self.input_b.next().unwrap();
+        if self.a.peek().is_some() && self.b.peek().is_some() {
+            let a = self.a.next().unwrap();
+            let b = self.b.next().unwrap();
             Some(Ok(a ^ b))
-        } else if self.input_a.peek().is_none() && self.input_b.peek().is_none() {
+        } else if self.a.peek().is_none() && self.b.peek().is_none() {
             None
         } else {
             Some(Err(io::Error::new(

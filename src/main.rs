@@ -1,6 +1,6 @@
 use std::{fs, io, io::BufRead, path};
 
-use fuin::{attack, encode};
+use fuin::{attack, crypto, encode};
 
 fn main() {
     println!(
@@ -24,7 +24,7 @@ fn main() {
     .unwrap();
 
     let plain_text = attack::single_byte_xor_attack(cipher_text);
-    println!("plain_text_with_highest_score: {}", plain_text.unwrap());
+    println!("attack single byte XOR: {}", plain_text.unwrap());
 
     // challenge 4: single byte XOR attack from file
     let path = path::Path::new("/Users/jeff/Documents/repos/fuin/src/single-byte-xor.txt");
@@ -59,7 +59,26 @@ fn main() {
     }
 
     println!(
-        "plain_text_with_highest_score: {}",
+        "attack single byte XOR from file: {}",
         plain_text_with_high_score
     );
+
+    // challenge 5: repeating key XOR
+
+    let plain_text = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
+    let plain_text_bytes = plain_text.chars().map(|c| c as u8);
+    let repeating_key_bytes = "ICE"
+        .chars()
+        .cycle()
+        .take(plain_text.len())
+        .map(|c| c as u8);
+
+    let xor_cipher = crypto::XorCipher::new(plain_text_bytes, repeating_key_bytes);
+
+    let cipher_text_bytes = xor_cipher.collect::<Result<Vec<u8>, io::Error>>().unwrap();
+    let cipher_text_hex = encode::hex::ByteToHexEncoder::new(cipher_text_bytes.into_iter()) // TODO: look into iterators over references
+        .collect::<Result<String, io::Error>>()
+        .unwrap();
+
+    println!("cipher_text_hex: {}", cipher_text_hex);
 }

@@ -1,18 +1,20 @@
 use std::{io, iter};
 
-pub struct XorCipher<I>
+pub struct XorCipher<I, J>
 where
     I: Iterator<Item = u8>,
+    J: Iterator<Item = u8>,
 {
     input_a: iter::Peekable<I>,
-    input_b: iter::Peekable<I>,
+    input_b: iter::Peekable<J>,
 }
 
-impl<I> XorCipher<I>
+impl<I, J> XorCipher<I, J>
 where
     I: Iterator<Item = u8>,
+    J: Iterator<Item = u8>,
 {
-    pub fn new(input_a: I, input_b: I) -> Self {
+    pub fn new(input_a: I, input_b: J) -> Self {
         XorCipher {
             input_a: input_a.peekable(),
             input_b: input_b.peekable(),
@@ -20,9 +22,10 @@ where
     }
 }
 
-impl<I> Iterator for XorCipher<I>
+impl<I, J> Iterator for XorCipher<I, J>
 where
     I: Iterator<Item = u8>,
+    J: Iterator<Item = u8>,
 {
     type Item = Result<u8, io::Error>;
     fn next(&mut self) -> Option<Self::Item> {

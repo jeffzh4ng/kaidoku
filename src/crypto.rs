@@ -1,5 +1,16 @@
 use std::{io, iter};
 
+pub fn xor_cipher_with_key<'a>(
+    plain_text: &'a str,
+    key: &'a str,
+) -> Box<dyn Iterator<Item = Result<u8, io::Error>> + 'a> {
+    let plain_text_bytes = plain_text.chars().map(|c| c as u8);
+    let repeating_key_bytes = key.chars().cycle().take(plain_text.len()).map(|c| c as u8);
+
+    let xor_cipher = XorCipher::new(plain_text_bytes, repeating_key_bytes);
+    Box::new(xor_cipher)
+}
+
 pub struct XorCipher<I, J>
 where
     I: Iterator<Item = u8>,

@@ -28,17 +28,13 @@ fn main() {
 
     // challenge 5: repeating key XOR
     let plain_text = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
-    let plain_text_bytes = plain_text.chars().map(|c| c as u8);
-    let repeating_key_bytes = "ICE"
-        .chars()
-        .cycle()
-        .take(plain_text.len())
-        .map(|c| c as u8);
+    let key = "ICE";
 
-    let xor_cipher = crypto::XorCipher::new(plain_text_bytes, repeating_key_bytes);
-
-    let cipher_text_bytes = xor_cipher.collect::<Result<Vec<u8>, io::Error>>().unwrap();
-    let cipher_text_hex = encode::hex::ByteToHexEncoder::new(cipher_text_bytes.into_iter()) // TODO: look into iterators over references
+    let cipher_text = crypto::xor_cipher_with_key(plain_text, key)
+        .collect::<Result<Vec<u8>, io::Error>>()
+        .unwrap()
+        .into_iter();
+    let cipher_text_hex = encode::hex::ByteToHexEncoder::new(cipher_text) // TODO: look into iterators over references
         .collect::<Result<String, io::Error>>()
         .unwrap();
 

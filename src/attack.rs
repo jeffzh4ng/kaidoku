@@ -1,8 +1,9 @@
 use std::{
-    collections::HashMap,
+    cmp::Ordering,
+    collections::{self, HashMap},
     fs,
     io::{self, BufRead},
-    path::Path,
+    path::{self, Path},
 };
 
 use crate::{crypto, encode};
@@ -115,4 +116,73 @@ pub fn single_byte_xor_attack_from_file(path_location: &str) -> String {
     }
 
     plain_text_with_high_score
+}
+
+#[derive(Eq, PartialEq)]
+struct SizeDistancePair(i32, i32);
+
+impl Ord for SizeDistancePair {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.1.cmp(&self.1) // min heap
+    }
+}
+
+impl PartialOrd for SizeDistancePair {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+// TODO: rust docs?
+pub fn repeating_byte_xor_attack(path_location: &str) {
+    // take in a file of base64 encoded strings
+    // decode the strings into bytes
+    let path = path::Path::new(path_location);
+    let display = path.display();
+    let file = match fs::File::open(path) {
+        Err(why) => panic!("couldn't open {}: {}", display, why),
+        Ok(file) => file,
+    };
+    let contents = io::BufReader::new(file)
+        .lines()
+        .map(|line| line.unwrap())
+        .collect::<Vec<String>>()
+        .join("");
+
+    // let cipher_text_bytes = encode::base64::Base64ToByteDecoder::new(contents.chars())
+    //     .collect::<Result<Vec<u8>, io::Error>>()
+    //     .unwrap();
+
+    let cipher_text_bytes: Vec<u8> = Vec::new();
+
+    let mut min_hamming_distances = collections::BinaryHeap::new();
+    for key_size in 2..40 {
+        let chunk_one = "".bytes();
+        let chunk_two = "".bytes();
+
+        let hamming_distance = encode::hamming_distance(chunk_one, chunk_two).unwrap();
+        let hamming_distance_normalized = hamming_distance as i32 / key_size;
+
+        min_hamming_distances.push(SizeDistancePair(key_size, hamming_distance_normalized));
+    }
+
+    // take the smallest 3 hamming distances
+    let keys_with_smallest_hamming_distances: Vec<_> = min_hamming_distances
+        .into_iter()
+        .take(3)
+        .map(|pair| pair.0)
+        .collect();
+
+    // break the ciphertext into blocks of key_size length
+    //  Now transpose the blocks: make a block that is the first byte of every block, and a block that is the second byte of every block, and so on.
+    let transposed_blocks: Vec<Vec<u8>> = Vec::new();
+
+    for b in transposed_blocks {
+        // solve each block as if it was single-character XOR
+        // the single-byte (char) XOR key is the most likely key for that block
+        let plain_text = single_byte_xor_attack(b);
+        println!("attack single byte XOR: {}", plain_text.unwrap());
+    }
+
+    // put them togethter for each transposed block and you have the key
 }

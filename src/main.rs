@@ -1,6 +1,14 @@
-use std::{fs, io, io::BufRead, path};
+use std::{
+    cmp::{self, Ordering},
+    collections, fs, io,
+    io::BufRead,
+    path,
+};
 
-use fuin::{attack, crypto, encode};
+use fuin::{
+    attack::{self, single_byte_xor_attack},
+    crypto, encode,
+};
 
 fn main() {
     println!(
@@ -64,7 +72,6 @@ fn main() {
     );
 
     // challenge 5: repeating key XOR
-
     let plain_text = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
     let plain_text_bytes = plain_text.chars().map(|c| c as u8);
     let repeating_key_bytes = "ICE"
@@ -81,4 +88,72 @@ fn main() {
         .unwrap();
 
     println!("cipher_text_hex: {}", cipher_text_hex);
+
+    #[derive(Eq, PartialEq)]
+    struct SizeDistancePair(i32, i32);
+
+    impl Ord for SizeDistancePair {
+        fn cmp(&self, other: &Self) -> Ordering {
+            other.1.cmp(&self.1) // min heap
+        }
+    }
+
+    impl PartialOrd for SizeDistancePair {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    // challenge 6: break repeating key XOR
+
+    // take in a file of base64 encoded strings
+    // decode the strings into bytes
+    let path = path::Path::new("/Users/jeff/Documents/repos/fuin/src/repeating-key-xor.txt");
+    let display = path.display();
+    let file = match fs::File::open(path) {
+        Err(why) => panic!("couldn't open {}: {}", display, why),
+        Ok(file) => file,
+    };
+    let contents = io::BufReader::new(file)
+        .lines()
+        .map(|line| line.unwrap())
+        .collect::<Vec<String>>()
+        .join("");
+
+    // let cipher_text_bytes = encode::base64::Base64ToByteDecoder::new(contents.chars())
+    //     .collect::<Result<Vec<u8>, io::Error>>()
+    //     .unwrap();
+
+    let cipher_text_bytes: Vec<u8> = Vec::new();
+
+    let mut min_hamming_distances = collections::BinaryHeap::new();
+    for key_size in 2..40 {
+        let chunk_one = "".bytes();
+        let chunk_two = "".bytes();
+
+        let hamming_distance = encode::hamming_distance(chunk_one, chunk_two).unwrap();
+        let hamming_distance_normalized = hamming_distance as i32 / key_size;
+
+        min_hamming_distances.push(SizeDistancePair(key_size, hamming_distance_normalized));
+    }
+
+    // take the smallest 3 hamming distances
+    let keys_with_smallest_hamming_distances: Vec<_> = min_hamming_distances
+        .into_iter()
+        .take(3)
+        .map(|pair| pair.0)
+        .collect();
+
+    // break the ciphertext into blocks of key_size length
+    //  Now transpose the blocks: make a block that is the first byte of every block, and a block that is the second byte of every block, and so on.
+    let transposed_blocks: Vec<Vec<u8>> = Vec::new();
+
+    for b in transposed_blocks {
+        // solve each block as if it was single-character XOR
+        // the single-byte (char) XOR key is the most likely key for that block
+        let plain_text = attack::single_byte_xor_attack(b);
+        println!("attack single byte XOR: {}", plain_text.unwrap());
+    }
+
+    // put them togethter for each transposed block and you have the key
 }

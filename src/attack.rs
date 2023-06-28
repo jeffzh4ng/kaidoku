@@ -134,7 +134,7 @@ impl PartialOrd for SizeDistancePair {
 }
 
 // TODO: rust docs?
-pub fn repeating_byte_xor_attack(path_location: &str) {
+pub fn repeating_byte_xor_attack(path_location: &str) -> &str {
     // take in a file of base64 encoded strings
     // decode the strings into bytes
     let path = path::Path::new(path_location);
@@ -149,11 +149,9 @@ pub fn repeating_byte_xor_attack(path_location: &str) {
         .collect::<Vec<String>>()
         .join("");
 
-    // let cipher_text_bytes = encode::base64::Base64ToByteDecoder::new(contents.chars())
-    //     .collect::<Result<Vec<u8>, io::Error>>()
-    //     .unwrap();
-
-    let cipher_text_bytes: Vec<u8> = Vec::new();
+    let cipher_text_bytes = encode::base64::Base64ToByteDecoder::new(contents.chars())
+        .collect::<Result<Vec<u8>, io::Error>>()
+        .unwrap();
 
     let mut min_hamming_distances = collections::BinaryHeap::new();
     for key_size in 2..40 {
@@ -185,4 +183,5 @@ pub fn repeating_byte_xor_attack(path_location: &str) {
     // }
 
     // put them togethter for each transposed block and you have the key
+    todo!()
 }

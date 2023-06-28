@@ -35,12 +35,12 @@ fn main() {
 
     // challenge 3: monoalphabetic vernam attack
     let cipher_text = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-    let plain_text = attack::single_byte_xor_attack(cipher_text);
+    let plain_text = attack::monoalphabetic_vernam_attack(cipher_text);
     println!("single byte XOR attack: {}", plain_text.unwrap());
 
     // challenge 4: monoalphabetic vernam attack (file variation)
     let path = "/Users/jeff/Documents/repos/fuin/src/single-character-xor.txt";
-    let plain_text = attack::single_byte_xor_attack_from_file(path);
+    let plain_text = attack::monoalphabetic_vernam_attack_file_variation(path);
     println!("single byte XOR from file attak: {}", plain_text);
 
     // -------------polyalphabetic "polyshift" ciphers--------------------------
@@ -68,7 +68,7 @@ fn main() {
 
     // challenge 6: polyalphabetic vernam attack
     let path = "/Users/jeff/Documents/repos/fuin/src/repeating-key-xor.txt";
-    let plain_text = attack::repeating_byte_xor_attack(path);
+    let plain_text = attack::polyalphabetic_vernam_attack(path);
     println!("repeating key XOR attack: {}", plain_text);
 
     // joseph mauborgne recognized if the key was "endless and senseless",

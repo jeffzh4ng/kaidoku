@@ -19,7 +19,7 @@ pub fn score(s: &str) -> i32 {
     })
 }
 
-pub fn single_byte_xor_attack(cipher_text_hex: &str) -> Option<String> {
+pub fn monoalphabetic_vernam_attack(cipher_text_hex: &str) -> Option<String> {
     let cipher_text = encode::hex::HexToByteDecoder::new(cipher_text_hex.chars())
         .collect::<Result<Vec<u8>, io::Error>>()
         .unwrap();
@@ -87,7 +87,7 @@ pub fn single_byte_xor_attack(cipher_text_hex: &str) -> Option<String> {
     Some(plain_text.to_string())
 }
 
-pub fn single_byte_xor_attack_from_file(path_location: &str) -> String {
+pub fn monoalphabetic_vernam_attack_file_variation(path_location: &str) -> String {
     let path = Path::new(path_location);
     let display = path.display();
     let file = match fs::File::open(path) {
@@ -102,7 +102,7 @@ pub fn single_byte_xor_attack_from_file(path_location: &str) -> String {
     for line in reader.lines() {
         match line {
             Ok(cipher_text) => {
-                let plain_text = single_byte_xor_attack(&cipher_text);
+                let plain_text = monoalphabetic_vernam_attack(&cipher_text);
 
                 if let Some(p) = plain_text {
                     if high_score == 0 || score(&p) > high_score {
@@ -134,7 +134,7 @@ impl PartialOrd for SizeDistancePair {
 }
 
 // TODO: rust docs?
-pub fn repeating_byte_xor_attack(path_location: &str) -> &str {
+pub fn polyalphabetic_vernam_attack(path_location: &str) -> &str {
     // take in a file of base64 encoded strings
     // decode the strings into bytes
     let path = path::Path::new(path_location);

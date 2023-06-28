@@ -1,9 +1,156 @@
+use std::{io, vec};
+
+// TODO: store as bytes instead of chars because input is ascii. then the code below does not need to use .chars()
+const B64_MAP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+#[derive(Copy, Clone, Debug)]
+enum DecodedByte {
+    Value(u8),
+    Padding,
+}
+
+pub struct Base64ToByteDecoder<I> {
+    input: I,
+    output: [Option<DecodedByte>; 2],
+}
+
+impl<I> Base64ToByteDecoder<I>
+where
+    I: Iterator<Item = char>,
+{
+    pub fn new(input: I) -> Self {
+        Base64ToByteDecoder {
+            input,
+            output: [None, None],
+        }
+    }
+}
+
+impl<I> Iterator for Base64ToByteDecoder<I>
+where
+    I: Iterator<Item = char>,
+{
+    type Item = Result<u8, io::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(DecodedByte::Value(byte)) = self.output.iter_mut().find_map(|b| b.take()) {
+            return Some(Ok(byte));
+        }
+
+        // process four b64 chars at a time
+        let mut four_b64_chars = vec![];
+        let mut padding_count = 0;
+
+        // read in four b64 chars
+        for i in 0..4 {
+            if let Some(c) = self.input.next() {
+                if c == '=' {
+                    padding_count += 1;
+                }
+
+                four_b64_chars.push(c);
+            } else {
+                if i == 0 {
+                    return None; // exit on empty input
+                }
+
+                // add padding for missing chars
+                padding_count += 1;
+                four_b64_chars.push('=');
+            }
+        }
+
+        if padding_count > 2 {
+            return Some(Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Invalid padding.",
+            )));
+        }
+
+        // convert four base64 chars into three bytes
+        let three_bytes = self.four_b64s_to_three_bytes(four_b64_chars, padding_count);
+
+        self.output = [Some(three_bytes[1]), Some(three_bytes[2])];
+        match three_bytes[0] {
+            DecodedByte::Value(byte) => Some(Ok(byte)),
+            DecodedByte::Padding => Some(Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Invalid padding.",
+            ))),
+        }
+    }
+}
+
+impl<I> Base64ToByteDecoder<I>
+where
+    I: Iterator<Item = char>,
+{
+    // bQ==
+    // 011011 010000 000000 000000
+    // 01101101
+
+    // b20=
+    // 011011 11 0110 110100
+    // 01101111 01101101
+
+    // b29t
+    // 011011 11(0110 1111)01 101101
+    // 01101111 01101111 01101101
+
+    fn four_b64s_to_three_bytes(
+        &self,
+        four_b64s: Vec<char>,
+        padding_count: i32,
+    ) -> [DecodedByte; 3] {
+        let mut four_bytes = vec![];
+        for i in 0..4 - padding_count {
+            let b = if four_b64s[i as usize] == '=' {
+                255
+            } else {
+                B64_MAP
+                    .chars() // TODO: avoid allocation?
+                    .position(|b64_char| b64_char == four_b64s[i as usize])
+                    .unwrap() as u8
+            };
+
+            four_bytes.push(b);
+        }
+        four_bytes.resize(four_bytes.len() + padding_count as usize, 255); // garbage bytes
+
+        // convert four bytes to three
+        let byte_one = four_bytes[0] << 2 | four_bytes[1] >> 4;
+        let byte_two = four_bytes[1] << 4 | four_bytes[2] >> 2;
+        let byte_three = four_bytes[2] << 6 | four_bytes[3];
+
+        // encoding padding bytes as indexes > max(b64) = 63
+        // the caller (iterator) will ignore these bytes
+        if padding_count == 2 {
+            [
+                DecodedByte::Value(byte_one),
+                DecodedByte::Padding,
+                DecodedByte::Padding,
+            ]
+        } else if padding_count == 1 {
+            [
+                DecodedByte::Value(byte_one),
+                DecodedByte::Value(byte_two),
+                DecodedByte::Padding,
+            ]
+        } else {
+            [
+                DecodedByte::Value(byte_one),
+                DecodedByte::Value(byte_two),
+                DecodedByte::Value(byte_three),
+            ]
+        }
+    }
+}
+
 pub struct ByteToBase64Encoder<I>
 where
     I: Iterator<Item = u8>,
 {
     input: I,
-    index: usize,
     output: [Option<char>; 3],
 }
 
@@ -55,13 +202,10 @@ where
             Some(four_b64_chars[3]),
         ];
 
-        self.index += 1;
         Some(four_b64_chars[0])
     }
 }
 
-// TODO: store as bytes instead of chars because input is ascii. then the code below does not need to use .chars()
-const B64_MAP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 impl<I> ByteToBase64Encoder<I>
 where
     I: Iterator<Item = u8>,
@@ -69,7 +213,6 @@ where
     pub fn new(input: I) -> Self {
         ByteToBase64Encoder {
             input,
-            index: 0,
             output: [None; 3],
         }
     }
@@ -107,6 +250,120 @@ mod tests {
     use crate::encode::{base64, hex};
 
     #[test]
+    fn base64_decoder_zero_chars() {
+        let input = "";
+        let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
+        let actual_output = base64_decoder
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap();
+        let expected_output: Vec<u8> = vec![];
+
+        assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
+    fn base64_decoder_one_char_without_padding() {
+        let input = "b";
+        let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
+        let actual_output = base64_decoder.collect::<Result<Vec<u8>, io::Error>>();
+
+        assert!(actual_output.is_err());
+    }
+
+    #[test]
+    fn base64_decoder_one_char_with_padding() {
+        let input = "b===";
+        let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
+        let actual_output = base64_decoder.collect::<Result<Vec<u8>, io::Error>>();
+
+        assert!(actual_output.is_err());
+    }
+
+    // bQ==
+    // 011011 010000 000000 000000
+    // 01101101
+
+    // b20=
+    // 011011 110110 110100
+    // 01101111 01101101
+
+    // b29t
+    // 011011 11(0110 1111)01 101101
+    // 01101111 01101111 01101101
+
+    #[test]
+    fn base64_decoder_two_char_with_padding() {
+        let input = "bQ==";
+        let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
+        let actual_output = base64_decoder
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap();
+        let expected_output: Vec<u8> = vec![0x6d];
+
+        assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
+    fn base64_decoder_two_char_without_padding() {
+        let input = "bQ";
+        let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
+        let actual_output = base64_decoder
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap();
+        let expected_output: Vec<u8> = vec![0x6d];
+
+        assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
+    fn base64_decoder_three_char_with_padding() {
+        let input = "b20=";
+        let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
+        let actual_output = base64_decoder
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap();
+        let expected_output: Vec<u8> = vec![0x6f, 0x6d];
+
+        assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
+    fn base64_decoder_three_char_without_padding() {
+        let input = "b20";
+        let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
+        let actual_output = base64_decoder
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap();
+        let expected_output: Vec<u8> = vec![0x6f, 0x6d];
+
+        assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
+    fn base64_decoder_four_char_with_padding() {
+        let input = "b29t";
+        let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
+        let actual_output = base64_decoder
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap();
+        let expected_output: Vec<u8> = vec![0x6f, 0x6f, 0x6d];
+
+        assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
+    fn base64_decoder_four_char_without_padding() {
+        let input = "b29t";
+        let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
+        let actual_output = base64_decoder
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap();
+        let expected_output: Vec<u8> = vec![0x6f, 0x6f, 0x6d];
+
+        assert_eq!(actual_output, expected_output);
+    }
+
+    #[test]
     fn base64_encoder_zero_byte() {
         let input = "";
         let hex_decoder = hex::HexToByteDecoder::new(input.chars())
@@ -124,7 +381,7 @@ mod tests {
     #[test]
     fn base64_encoder_one_byte() {
         let input = "6d";
-        let hex_decoder = hex::HexToByteDecoder::new(input.chars())
+        let hex_decoder: std::vec::IntoIter<u8> = hex::HexToByteDecoder::new(input.chars())
             .collect::<Result<Vec<u8>, io::Error>>()
             .unwrap()
             .into_iter();

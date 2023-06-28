@@ -177,12 +177,12 @@ pub fn repeating_byte_xor_attack(path_location: &str) {
     //  Now transpose the blocks: make a block that is the first byte of every block, and a block that is the second byte of every block, and so on.
     let transposed_blocks: Vec<Vec<u8>> = Vec::new();
 
-    for b in transposed_blocks {
-        // solve each block as if it was single-character XOR
-        // the single-byte (char) XOR key is the most likely key for that block
-        let plain_text = single_byte_xor_attack(b);
-        println!("attack single byte XOR: {}", plain_text.unwrap());
-    }
+    // for b in transposed_blocks {
+    //     // solve each block as if it was single-character XOR
+    //     // the single-byte (char) XOR key is the most likely key for that block
+    //     let plain_text = single_byte_xor_attack(b);
+    //     println!("attack single byte XOR: {}", plain_text.unwrap());
+    // }
 
     // put them togethter for each transposed block and you have the key
 }

@@ -1,17 +1,17 @@
 use std::{io, iter};
 
-pub fn xor_cipher_with_key<'a>(
+pub fn vernam_cipher_with_key<'a>(
     plain_text: &'a str,
     key: &'a str,
 ) -> Box<dyn Iterator<Item = Result<u8, io::Error>> + 'a> {
     let plain_text_bytes = plain_text.chars().map(|c| c as u8);
     let repeating_key_bytes = key.chars().cycle().take(plain_text.len()).map(|c| c as u8);
 
-    let xor_cipher = XorCipher::new(plain_text_bytes, repeating_key_bytes);
+    let xor_cipher = VernamCipher::new(plain_text_bytes, repeating_key_bytes);
     Box::new(xor_cipher)
 }
 
-pub struct XorCipher<I, J>
+pub struct VernamCipher<I, J>
 where
     I: Iterator<Item = u8>,
     J: Iterator<Item = u8>,
@@ -20,20 +20,20 @@ where
     b: iter::Peekable<J>,
 }
 
-impl<I, J> XorCipher<I, J>
+impl<I, J> VernamCipher<I, J>
 where
     I: Iterator<Item = u8>,
     J: Iterator<Item = u8>,
 {
     pub fn new(a: I, b: J) -> Self {
-        XorCipher {
+        VernamCipher {
             a: a.peekable(),
             b: b.peekable(),
         }
     }
 }
 
-impl<I, J> Iterator for XorCipher<I, J>
+impl<I, J> Iterator for VernamCipher<I, J>
 where
     I: Iterator<Item = u8>,
     J: Iterator<Item = u8>,
@@ -74,7 +74,7 @@ mod tests {
             .unwrap()
             .into_iter();
 
-        let xor_cipher = XorCipher::new(hex_decoder_a, hex_decoder_b);
+        let xor_cipher = VernamCipher::new(hex_decoder_a, hex_decoder_b);
         let actual_output = xor_cipher.collect::<Result<Vec<u8>, io::Error>>().unwrap();
         let actual_output_hex = hex::ByteToHexEncoder::new(actual_output.into_iter());
 
@@ -98,7 +98,7 @@ mod tests {
             .unwrap()
             .into_iter();
 
-        let xor_cipher = XorCipher::new(hex_decoder_a, hex_decoder_b);
+        let xor_cipher = VernamCipher::new(hex_decoder_a, hex_decoder_b);
         let actual_output = xor_cipher.collect::<Result<Vec<u8>, io::Error>>();
 
         assert!(actual_output.is_err());

@@ -62,7 +62,7 @@ fn main() {
     let plain_text = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
     let key = "ICE";
 
-    let cipher_text = crypto::xor_cipher_with_key(plain_text, key)
+    let cipher_text = crypto::stream::vernam_cipher_with_key(plain_text, key)
         .collect::<Result<Vec<u8>, io::Error>>()
         .unwrap()
         .into_iter();

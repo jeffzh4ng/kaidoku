@@ -46,7 +46,7 @@ pub fn monoalphabetic_vernam_attack(cipher_text_hex: &str) -> Option<(u8, String
             .collect::<Vec<u8>>()
             .into_iter();
 
-        let plain_bytes = crypto::XorCipher::new(c, k_stretched.clone())
+        let plain_bytes = crypto::stream::VernamCipher::new(c, k_stretched.clone())
             .collect::<Result<Vec<u8>, io::Error>>()
             .unwrap();
 
@@ -151,9 +151,10 @@ pub fn polyalphabetic_vernam_attack(path_location: &str) -> String {
         .cycle()
         .take(cipher_text_bytes.len());
 
-    let plain_bytes = crypto::XorCipher::new(cipher_text_bytes.into_iter(), probable_key_stretched)
-        .collect::<Result<Vec<u8>, io::Error>>()
-        .unwrap();
+    let plain_bytes =
+        crypto::stream::VernamCipher::new(cipher_text_bytes.into_iter(), probable_key_stretched)
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .unwrap();
     let plain_text = String::from_utf8(plain_bytes).unwrap();
 
     // println!("{:?}", plain_text);

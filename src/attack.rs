@@ -192,7 +192,7 @@ fn find_probable_key_size(cipher_text_bytes: &[u8]) -> i32 {
         // println!("c1: {:?}", chunk_one);
         // println!("c2: {:?}", chunk_two);
 
-        let hamming_distance = encode::hamming_distance(chunk_one, chunk_two).unwrap();
+        let hamming_distance = encode::hamming::distance(chunk_one, chunk_two).unwrap();
         let hamming_distance_normalized = hamming_distance as i32 / key_size as i32;
 
         min_hamming_distances.push(SizeDistancePair(

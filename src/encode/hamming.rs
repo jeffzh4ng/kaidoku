@@ -2,10 +2,7 @@ use std::io;
 
 use crate::crypto;
 
-pub mod base64;
-pub mod hex;
-
-pub fn hamming_distance<I, J>(a: I, b: J) -> Result<usize, io::Error>
+pub fn distance<I, J>(a: I, b: J) -> Result<usize, io::Error>
 where
     I: Iterator<Item = u8>,
     J: Iterator<Item = u8>,
@@ -32,7 +29,7 @@ mod test {
         let b = "wokka wokka!!!".bytes();
 
         let expected_hamming_distance = 37;
-        let actual_hamming_distance = hamming_distance(a, b).unwrap();
+        let actual_hamming_distance = distance(a, b).unwrap();
 
         assert_eq!(expected_hamming_distance, actual_hamming_distance);
     }

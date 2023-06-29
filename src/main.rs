@@ -2,6 +2,11 @@ use std::io;
 
 use fuin::{attack, crypto, encode};
 
+// TODOs
+// - rust docs
+// - cloning
+// - modules
+
 fn main() {
     println!(
         " 
@@ -41,7 +46,7 @@ fn main() {
     // challenge 4: monoalphabetic vernam attack (file variation)
     let path = "/Users/jeff/Documents/repos/fuin/src/monoalphabetic_vernam_ciphertext.txt";
     let plain_text = attack::monoalphabetic_vernam_attack_file_variation(path);
-    println!("single byte XOR from file attak: {}", plain_text);
+    println!("single byte XOR from file attack: {}", plain_text);
 
     // -------------polyalphabetic "polyshift" ciphers--------------------------
     // the cipher is attacked by kasiski examination variation

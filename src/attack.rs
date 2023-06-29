@@ -19,7 +19,7 @@ pub fn score(s: &str) -> i32 {
     })
 }
 
-pub fn monoalphabetic_vernam_attack(cipher_text_hex: &str) -> Option<String> {
+pub fn monoalphabetic_vernam_attack(cipher_text_hex: &str) -> Option<(Vec<u8>, String)> {
     let cipher_text = encode::hex::HexToByteDecoder::new(cipher_text_hex.chars())
         .collect::<Result<Vec<u8>, io::Error>>()
         .unwrap();
@@ -27,7 +27,7 @@ pub fn monoalphabetic_vernam_attack(cipher_text_hex: &str) -> Option<String> {
     // ciphertext: 1111 0000
     // keyspace:   0000 0001
     // plaintext:  1111 0001
-    let mut plain_text_scores = HashMap::new();
+    let mut plain_text_scores: HashMap<(Vec<u8>, String), i32> = HashMap::new();
 
     // brute force through the key space
     let key_space = (0..=255).collect::<Vec<u8>>();
@@ -37,33 +37,33 @@ pub fn monoalphabetic_vernam_attack(cipher_text_hex: &str) -> Option<String> {
         // p = plain text
         // c = cipher text
         // k = key
-        let input_a = cipher_text.clone().into_iter();
-        let input_b = std::iter::repeat(k)
+        let c = cipher_text.clone().into_iter();
+        let k = std::iter::repeat(k)
             .take(cipher_text.len())
             .collect::<Vec<u8>>()
             .into_iter();
 
-        let plain_bytes = crypto::XorCipher::new(input_a, input_b)
+        let plain_bytes = crypto::XorCipher::new(c, k.clone())
             .collect::<Result<Vec<u8>, io::Error>>()
             .unwrap();
 
-        let s = String::from_utf8(plain_bytes.clone());
+        let plain_text = String::from_utf8(plain_bytes.clone());
 
         // check if plain bytes are invalid utf8
-        if s.is_err() {
+        if plain_text.is_err() {
             continue;
         }
 
         // convert bytes to string, calculate the score, and store it in the map
-        let plain_text = s.unwrap();
+        let plain_text = plain_text.unwrap();
         let score = score(&plain_text);
-        plain_text_scores.insert(plain_text, score);
+        plain_text_scores.insert((k.collect(), plain_text), score);
     }
 
     // sort the map by score
     let mut plain_text_scores_tuples = plain_text_scores
         .into_iter()
-        .collect::<Vec<(String, i32)>>();
+        .collect::<Vec<((Vec<u8>, String), i32)>>();
     plain_text_scores_tuples.sort_by(|a, b| b.1.cmp(&a.1));
 
     if plain_text_scores_tuples.is_empty() {
@@ -77,14 +77,13 @@ pub fn monoalphabetic_vernam_attack(cipher_text_hex: &str) -> Option<String> {
         println!("two: {:?}", &plain_text_scores_tuples[1].0);
     }
 
-    if !&plain_text_scores_tuples[0].0.as_bytes().is_ascii() {
+    if !&plain_text_scores_tuples[0].0 .1.as_bytes().is_ascii() {
         return None;
     }
 
     // select the plain text with the highest score
-    let plain_text = &plain_text_scores_tuples[0].0;
-
-    Some(plain_text.to_string())
+    let key_plain_text_tuple = &plain_text_scores_tuples[0].0;
+    Some(key_plain_text_tuple.clone())
 }
 
 pub fn monoalphabetic_vernam_attack_file_variation(path_location: &str) -> String {
@@ -104,7 +103,7 @@ pub fn monoalphabetic_vernam_attack_file_variation(path_location: &str) -> Strin
             Ok(cipher_text) => {
                 let plain_text = monoalphabetic_vernam_attack(&cipher_text);
 
-                if let Some(p) = plain_text {
+                if let Some((k, p)) = plain_text {
                     if high_score == 0 || score(&p) > high_score {
                         high_score = score(&p);
                         plain_text_with_high_score = p;

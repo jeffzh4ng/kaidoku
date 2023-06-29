@@ -5,7 +5,6 @@ use fuin::{attack, crypto, encode};
 // TODOs
 // - rust docs
 // - cloning
-// - modules
 
 fn main() {
     println!(
@@ -40,12 +39,12 @@ fn main() {
 
     // challenge 3: monoalphabetic vernam attack
     let cipher_text = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-    let plain_text = attack::monoalphabetic_vernam_attack(cipher_text);
+    let plain_text = attack::vernam::monoalphabetic_attack(cipher_text);
     println!("single byte XOR attack: {}", plain_text.unwrap().1);
 
     // challenge 4: monoalphabetic vernam attack (file variation)
     let path = "/Users/jeff/Documents/repos/fuin/src/monoalphabetic_vernam_ciphertext.txt";
-    let plain_text = attack::monoalphabetic_vernam_attack_file_variation(path);
+    let plain_text = attack::vernam::monoalphabetic_attack_file_variation(path);
     println!("single byte XOR from file attack: {}", plain_text);
 
     // -------------polyalphabetic "polyshift" ciphers--------------------------
@@ -73,7 +72,7 @@ fn main() {
 
     // challenge 6: polyalphabetic vernam attack
     let path = "/Users/jeff/Documents/repos/fuin/src/polyalphabetic_vernam_ciphertext.txt";
-    let plain_text = attack::polyalphabetic_vernam_attack(path);
+    let plain_text = attack::vernam::polyalphabetic_attack(path);
     println!("polyalphabetic vernam attack: {}", plain_text);
 
     // joseph mauborgne recognized if the key was "endless and senseless",

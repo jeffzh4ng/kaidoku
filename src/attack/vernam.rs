@@ -22,7 +22,7 @@ pub fn score(s: &str) -> i32 {
     })
 }
 
-pub fn monoalphabetic_vernam_attack(cipher_text_hex: &str) -> Option<(u8, String)> {
+pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Option<(u8, String)> {
     let cipher_text = encode::hex::HexToByteDecoder::new(cipher_text_hex.chars())
         .collect::<Result<Vec<u8>, io::Error>>()
         .unwrap();
@@ -89,7 +89,7 @@ pub fn monoalphabetic_vernam_attack(cipher_text_hex: &str) -> Option<(u8, String
     Some(key_plain_text_tuple.clone())
 }
 
-pub fn monoalphabetic_vernam_attack_file_variation(path_location: &str) -> String {
+pub fn monoalphabetic_attack_file_variation(path_location: &str) -> String {
     let path = Path::new(path_location);
     let display = path.display();
     let file = match fs::File::open(path) {
@@ -104,7 +104,7 @@ pub fn monoalphabetic_vernam_attack_file_variation(path_location: &str) -> Strin
     for line in reader.lines() {
         match line {
             Ok(cipher_text) => {
-                let plain_text = monoalphabetic_vernam_attack(&cipher_text);
+                let plain_text = monoalphabetic_attack(&cipher_text);
 
                 if let Some((k, p)) = plain_text {
                     if high_score == 0 || score(&p) > high_score {
@@ -135,7 +135,7 @@ impl PartialOrd for SizeDistancePair {
     }
 }
 
-pub fn polyalphabetic_vernam_attack(path_location: &str) -> String {
+pub fn polyalphabetic_attack(path_location: &str) -> String {
     // employing hamming distance variation of the kasiski attack
     let cipher_text_bytes = parse_and_decode_file(path_location);
     let probable_key_size = find_probable_key_size(&cipher_text_bytes);
@@ -251,7 +251,7 @@ fn find_probable_key(cipher_text_bytes: &[u8], probable_key_size: i32) -> Vec<u8
                 .collect::<Result<String, io::Error>>()
                 .unwrap();
 
-            let key_plain_text_tuple = monoalphabetic_vernam_attack(&hex_encoded_bytes);
+            let key_plain_text_tuple = monoalphabetic_attack(&hex_encoded_bytes);
             key_plain_text_tuple.unwrap().0
         })
         .collect();

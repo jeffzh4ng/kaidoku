@@ -141,10 +141,6 @@ pub fn polyalphabetic_attack(path_location: &str) -> String {
     let probable_key_size = find_probable_key_size(&cipher_text_bytes);
     let probable_key = find_probable_key(&cipher_text_bytes, probable_key_size);
 
-    // println!("{:?}", cipher_text_bytes);
-    // println!("{:?}", probable_key_size); // 5, 2, 13
-    // println!("{:?}", probable_key);
-
     // TODO: make decrypt function for plain bytes
     let probable_key_stretched = probable_key
         .into_iter()
@@ -156,8 +152,6 @@ pub fn polyalphabetic_attack(path_location: &str) -> String {
             .collect::<Result<Vec<u8>, io::Error>>()
             .unwrap();
     let plain_text = String::from_utf8(plain_bytes).unwrap();
-
-    // println!("{:?}", plain_text);
 
     plain_text
 }
@@ -188,17 +182,29 @@ fn find_probable_key_size(cipher_text_bytes: &[u8]) -> i32 {
     for key_size in 2..40 {
         // assuming Alice and Bob aren't aware of Shannon's perfect secrecy
         // ==> key length < 40
-        let chunk_one = cipher_text_bytes[0..key_size].iter().copied();
-        let chunk_two = cipher_text_bytes[key_size..key_size * 2].iter().copied();
-        // println!("c1: {:?}", chunk_one);
-        // println!("c2: {:?}", chunk_two);
+        let chunks = [
+            cipher_text_bytes[0..key_size].iter().copied(),
+            cipher_text_bytes[key_size..key_size * 2].iter().copied(),
+            cipher_text_bytes[key_size * 2..key_size * 3]
+                .iter()
+                .copied(),
+            cipher_text_bytes[key_size * 3..key_size * 4]
+                .iter()
+                .copied(),
+        ];
+        let mut sum = 0;
+        for i in 0..chunks.len() {
+            for j in i + 1..chunks.len() {
+                let s = encode::hamming::distance(chunks[i].clone(), chunks[j].clone()).unwrap();
+                sum += s
+            }
+        }
 
-        let hamming_distance = encode::hamming::distance(chunk_one, chunk_two).unwrap();
-        let hamming_distance_normalized = hamming_distance as i32 / key_size as i32;
+        let hamming_distance_normalized = sum / key_size;
 
         min_hamming_distances.push(SizeDistancePair(
             key_size as i32,
-            hamming_distance_normalized,
+            hamming_distance_normalized as i32,
         ));
     }
 
@@ -208,10 +214,6 @@ fn find_probable_key_size(cipher_text_bytes: &[u8]) -> i32 {
         .take(5)
         .map(|pair| pair.0)
         .collect();
-    // println!(
-    // "most probable key lengths: {:?}",
-    // keys_with_smallest_hamming_distances
-    // );
 
     let probable_key_size = keys_with_smallest_hamming_distances[0]; // take the first
     probable_key_size

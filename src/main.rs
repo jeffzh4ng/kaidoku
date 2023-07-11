@@ -50,7 +50,8 @@ fn main() {
     // -------------polyalphabetic "polyshift" ciphers--------------------------
     // the cipher is attacked by kasiski examination variation
     // https://en.wikipedia.org/wiki/Kasiski_examination
-    // we find the probable key size by using the hamming distance statistic, instead of the traditional repeat sequence distance statistic
+    // we find the probable key size by using the hamming distance statistic,
+    // instead of the traditional repeat sequence distance statistic
 
     // once we have the probable key size, we break the ciphertext into blocks of that size
     // tranpose the blocks such that the groupings contain ciphertext characters encrypted with the *same* key (shift)

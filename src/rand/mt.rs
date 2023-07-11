@@ -15,7 +15,9 @@ const t: i32 = 15;
 
 // 2^(nw-r) - 1 is a Mersenne Prime
 
-// The Mersenne Twister is a general-purpose pseudorandom number generator (PRNG) developed in 1997 by Makoto Matsumoto (松本 眞) and Takuji Nishimura (西村 拓士). Its name derives from the fact that its period length is chosen to be a Mersenne prime.
+// The Mersenne Twister is a general-purpose pseudorandom number generator (PRNG)
+// developed in 1997 by Makoto Matsumoto (松本 眞) and Takuji Nishimura (西村 拓士).
+// Its name derives from the fact that its period length is chosen to be a Mersenne prime.
 // -> https://en.wikipedia.org/wiki/Mersenne_Twister
 pub struct MersenneTwister {
     state: [u8; 32],

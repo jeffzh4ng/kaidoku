@@ -1,6 +1,8 @@
 use rand::{Error, RngCore};
 
-// RC4 (Rivest Cipher 4, also known as ARC4 or ARCFOUR, meaning Alleged RC4). While it is remarkable for its simplicity and speed in software, multiple vulnerabilities have been discovered in RC4, rendering it insecure.
+// RC4 (Rivest Cipher 4, also known as ARC4 or ARCFOUR, meaning Alleged RC4).
+// While it is remarkable for its simplicity and speed in software, multiple
+// vulnerabilities have been discovered in RC4, rendering it insecure.
 // -> https://en.wikipedia.org/wiki/RC4
 
 pub struct RC4 {
@@ -9,9 +11,12 @@ pub struct RC4 {
     j: u8,
 }
 
-// Many stream ciphers are based on linear-feedback shift registers (LFSRs), which, while efficient in hardware, are less so in software. The design of RC4 avoids the use of LFSRs and is ideal for software implementation, as it requires only byte manipulations.
+// Many stream ciphers are based on linear-feedback shift registers (LFSRs), which,
+// while efficient in hardware, are less so in software. The design of RC4 avoids
+// the use of LFSRs and is ideal for software implementation, as it requires only byte manipulations.
 
-// It uses 256 bytes of memory for the state array, S[0] through S[255], k bytes of memory for the key, key[0] through key[k−1], and integer variables, i, j, and K.
+// It uses 256 bytes of memory for the state array, S[0] through S[255], k bytes
+// of memory for the key, key[0] through key[k−1], and integer variables, i, j, and K.
 impl RngCore for RC4 {
     fn next_u32(&mut self) -> u32 {
         self.i = self.i.wrapping_add(1); // add 1 mod 256

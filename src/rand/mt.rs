@@ -1,17 +1,17 @@
 use rand::{Error, RngCore, SeedableRng};
 
 // s, t: TGFSR(R) tempering bit shifts
-const s: i32 = 7;
-const t: i32 = 15;
+const S: u32 = 7;
+const T: u32 = 15;
 
-// // b, c: TGFSR(R) tempering bitmasks
-// const b: i32 = 2636928640; // 9D2C5680_16
-// const c: i32 = 4022730752; // EFC60000_16
+// b, c: TGFSR(R) tempering bitmasks
+const B: u32 = 2636928640; // 9D2C5680_16
+const C: u32 = 4022730752; // EFC60000_16
 
-// // u, d, l: additional tempering bit shifts/masks
-// const u: i32 = 11;
-// const d: i32 = 4294967295; // FFFFFFFF_16
-// const l: i32 = 18;
+// u, d, l: additional tempering bit shifts/masks
+const U: u32 = 11;
+const D: u32 = 4294967295; // FFFFFFFF_16
+const L: u32 = 18;
 
 // 2^(nw-r) - 1 is a Mersenne Prime
 
@@ -20,16 +20,16 @@ const t: i32 = 15;
 // Its name derives from the fact that its period length is chosen to be a Mersenne prime.
 // -> https://en.wikipedia.org/wiki/Mersenne_Twister
 pub struct MersenneTwister {
-    state: [u8; 32],
+    state: [u32; 32], // word size for MT19937 is 32 bits
     i: usize,
-    n: i32,
+    n: u32,
 }
 
 impl RngCore for MersenneTwister {
     fn next_u32(&mut self) -> u32 {
         // twist every n numbers
-        if self.i as i32 >= self.n {
-            if self.i as i32 > self.n {
+        if self.i as u32 >= self.n {
+            if self.i as u32 > self.n {
                 // error
             }
 
@@ -38,15 +38,14 @@ impl RngCore for MersenneTwister {
 
         // extract a tempered value based on self.state[i]
         let mut y = self.state[self.i];
-        // y = y ^ ((y >> u) & d);
-        // y = y ^ ((y << s) & b);
-        // y = y ^ ((y << t) & c);
-        // y = y ^ (y >> l);
+        y = y ^ ((y >> U) & D);
+        y = y ^ ((y << S) & B);
+        y = y ^ ((y << T) & C);
+        y = y ^ (y >> L);
 
         self.i += 1;
-        // return lowest w bits of (y)
 
-        todo!()
+        y
     }
 
     fn next_u64(&mut self) -> u64 {

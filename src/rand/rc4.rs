@@ -1,4 +1,4 @@
-use rand::{Error, RngCore};
+use rand::{Error, RngCore, SeedableRng};
 
 // RC4 (Rivest Cipher 4, also known as ARC4 or ARCFOUR, meaning Alleged RC4).
 // While it is remarkable for its simplicity and speed in software, multiple
@@ -40,5 +40,25 @@ impl RngCore for RC4 {
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> {
         self.fill_bytes(dest);
         Ok(())
+    }
+}
+
+impl SeedableRng for RC4 {
+    type Seed = [u8; 32];
+
+    fn from_seed(seed: Self::Seed) -> Self {
+        let mut S = Vec::new();
+
+        for i in 0..256 {
+            S[i] = i as u8;
+        }
+
+        let mut j = 0;
+        for i in 0..256 {
+            j = (j + S[i] + seed[i % seed_length]) % 256;
+            S.swap(i, j);
+        }
+
+        todo!()
     }
 }

@@ -43,22 +43,22 @@ impl RngCore for RC4 {
     }
 }
 
-impl SeedableRng for RC4 {
-    type Seed = [u8; 32];
+// impl SeedableRng for RC4 {
+//     type Seed = [u8; 32];
 
-    fn from_seed(seed: Self::Seed) -> Self {
-        let mut S = Vec::new();
+//     fn from_seed(seed: Self::Seed) -> Self {
+//         let mut S = Vec::new();
 
-        for i in 0..256 {
-            S[i] = i as u8;
-        }
+//         for i in 0..256 {
+//             S[i] = i as u8;
+//         }
 
-        let mut j = 0;
-        for i in 0..256 {
-            j = (j + S[i] + seed[i % seed_length]) % 256;
-            S.swap(i, j);
-        }
+//         let mut j = 0;
+//         for i in 0..256 {
+//             j = (j + S[i] + seed[i % seed_length]) % 256;
+//             S.swap(i, j);
+//         }
 
-        todo!()
-    }
-}
+//         todo!()
+//     }
+// }

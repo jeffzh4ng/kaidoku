@@ -6,6 +6,7 @@ use fuin::{attack, crypto, encode, rand};
 // TODOs
 // - rust docs
 // - cloning
+// - paths
 
 fn main() {
     println!(
@@ -91,7 +92,7 @@ fn main() {
 
     // -------------mt19937 cipher--------------------------------------------
     // challenge 21: implement MT19937 RNG
-    let seed = 5489u32;
+    let seed = 1131464071u32;
     let seed_bytes = seed.to_be_bytes();
 
     let mut mt = rand::MT::from_seed(seed_bytes);
@@ -99,7 +100,7 @@ fn main() {
         let mut buf = [0u8; 4];
         mt.fill_bytes(&mut buf);
 
-        let x = i32::from_be_bytes(buf);
+        let x = u32::from_be_bytes(buf);
         println!("mt19937 random number: {x}");
     }
 

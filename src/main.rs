@@ -1,6 +1,7 @@
 use std::io;
 
-use fuin::{attack, crypto, encode};
+use ::rand::prelude::*;
+use fuin::{attack, crypto, encode, rand};
 
 // TODOs
 // - rust docs
@@ -89,6 +90,19 @@ fn main() {
     // TODO: talk about relaxing, and approximating perfect secrecy --> practical secrecy aka TRNG -> PRNG
 
     // -------------mt19937 cipher--------------------------------------------
+    // challenge 21: implement MT19937 RNG
+    let seed = 5489u32;
+    let seed_bytes = seed.to_be_bytes();
+
+    let mut mt = rand::MT::from_seed(seed_bytes);
+    for i in 0..10 {
+        let mut buf = [0u8; 4];
+        mt.fill_bytes(&mut buf);
+
+        let x = u32::from_be_bytes(buf);
+        println!("mt19937 random number: {x}");
+    }
+
     // -------------rc4 cipher------------------------------------------------
     // -------------salsa20 cipher--------------------------------------------
     // -------------chacha20 cipher-------------------------------------------

@@ -95,11 +95,11 @@ fn main() {
     let seed_bytes = seed.to_be_bytes();
 
     let mut mt = rand::MT::from_seed(seed_bytes);
-    for i in 0..10 {
+    for _ in 0..10 {
         let mut buf = [0u8; 4];
         mt.fill_bytes(&mut buf);
 
-        let x = u32::from_be_bytes(buf);
+        let x = i32::from_be_bytes(buf);
         println!("mt19937 random number: {x}");
     }
 

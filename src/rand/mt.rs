@@ -1,4 +1,4 @@
-use rand::{Error, RngCore};
+use rand::{Error, RngCore, SeedableRng};
 
 // n: degree of recurrence
 const N: usize = 624;
@@ -102,4 +102,21 @@ impl MersenneTwister {
     }
 }
 
-// impl SeedableRng for MersenneTwister {}
+impl SeedableRng for MersenneTwister {
+    type Seed = [u8; 32];
+
+    fn from_seed(seed: Self::Seed) -> Self {
+        let mt = MersenneTwister {
+            state: [0; 32],
+            i: N + 1,
+        };
+
+        mt.state[0] = seed;
+
+        for i in 1..N {
+            mt.state[i] = (mt.state[i - 1] ^ (mt.state[i - 1] >> (W - 2)) * f) + i;
+        }
+
+        mt
+    }
+}

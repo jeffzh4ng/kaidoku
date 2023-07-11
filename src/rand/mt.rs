@@ -1,4 +1,17 @@
-use rand::{Error, RngCore, SeedableRng};
+use rand::{Error, RngCore};
+
+// n: degree of recurrence
+const N: usize = 624;
+
+// m: middle word, an offset used in the recurrence relation defining the series x, 1 ≤ m < n
+const M: usize = 397;
+// r: separation point of one word, or the number of bits of the lower bitmask, 0 ≤ r ≤ w − 1
+const R: u32 = 31;
+const LOWER_MASK: u32 = (1 << R) - 1;
+const UPPER_MASK: u32 = !LOWER_MASK;
+
+// a: coefficients of the rational normal form twist matrix
+const A: u32 = 2567483615; // 9908B0DF_16
 
 // s, t: TGFSR(R) tempering bit shifts
 const S: u32 = 7;
@@ -22,15 +35,17 @@ const L: u32 = 18;
 pub struct MersenneTwister {
     state: [u32; 32], // word size for MT19937 is 32 bits
     i: usize,
-    n: u32,
 }
 
 impl RngCore for MersenneTwister {
     fn next_u32(&mut self) -> u32 {
-        // twist every n numbers
-        if self.i as u32 >= self.n {
-            if self.i as u32 > self.n {
-                // error
+        // twist every 624 numbers
+        if self.i >= N {
+            if self.i > N {
+                // MT generator was never seeded
+                // -> seed with constant value since RngCore.next_u32 cannot fail.
+
+                // TODO
             }
 
             self.twist();
@@ -63,9 +78,27 @@ impl RngCore for MersenneTwister {
 }
 
 impl MersenneTwister {
+    fn new() -> Self {
+        MersenneTwister {
+            state: [0; 32],
+            i: N + 1,
+        }
+    }
+
     fn twist(&mut self) {
         // generate the next n values from the series x_i
-        todo!()
+        for _ in 0..N {
+            let x = (self.state[self.i] & UPPER_MASK) + (self.state[(self.i + 1) % N] & LOWER_MASK);
+
+            let mut x_a = x >> 1;
+            if x % 2 != 0 {
+                // ==> lowest bit of x is 1
+                x_a ^= A;
+            }
+            self.state[self.i] = self.state[(self.i + M) % N] ^ x_a;
+        }
+
+        self.i = 0;
     }
 }
 

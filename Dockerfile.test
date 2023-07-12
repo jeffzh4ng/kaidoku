@@ -1,0 +1,10 @@
+FROM rust:latest
+
+RUN apt-get update && apt-get install -y dieharder
+
+WORKDIR /usr/src/fuin
+COPY . .
+
+RUN cargo install --path .
+
+CMD ["cargo", "test"]

@@ -144,9 +144,7 @@ mod tests {
         let seed_bytes = seed.to_be_bytes();
         let mut mt = MT::from_seed(seed_bytes);
 
-        let path = path::Path::new(
-            "/Users/jeff/Documents/repos/fuin/src/rand/mt_test_vector_1131464071.txt",
-        );
+        let path = path::Path::new("./tests/data/mt_test_vector_1131464071.txt");
         let display = path.display();
         let file = match fs::File::open(path) {
             Err(why) => panic!("couldn't open {}: {}", display, why),

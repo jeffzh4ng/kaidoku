@@ -165,4 +165,7 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn dieharder_distinguishability_test() {}
 }

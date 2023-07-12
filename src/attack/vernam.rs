@@ -106,7 +106,7 @@ pub fn monoalphabetic_attack_file_variation(path_location: &str) -> String {
             Ok(cipher_text) => {
                 let plain_text = monoalphabetic_attack(&cipher_text);
 
-                if let Some((k, p)) = plain_text {
+                if let Some((_k, p)) = plain_text {
                     if high_score == 0 || score(&p) > high_score {
                         high_score = score(&p);
                         plain_text_with_high_score = p;

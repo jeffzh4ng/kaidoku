@@ -7,3 +7,7 @@ edition = "2021"
 
 [dependencies]
 rand = "0.8.5"
+
+[build-dependencies]
+bindgen = "0.66.1"
+pkg-config = "0.3.27"

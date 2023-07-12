@@ -35,7 +35,7 @@ fn main() {
     // *the characters aren't shifted by the mod 26 operator. they are shifted by the XOR operator*
     // the resulting ciphertext character that the byte encodes is not *key=K* positions ahead of plaintext character
 
-    // -------------monoalphabetic "singleshift" ciphers--------------------------
+    // -------------monoalphabetic "singleshift" ciphers------------------------
     // the cipher is attacked simply by brute forcing through the keyspace aka shift space
     // decrypting the ciphertext with the single shift, and then scoring the plaintext based on freq analysis
 
@@ -83,20 +83,20 @@ fn main() {
     // then cryptanalysis (polyalphabetic vernam attack) above would be rendered impossible
     // this was later formalized by claude shannon in a classified report in 1945, and in a public one in 1949
 
-    // -------------one time pad----------------------------------------------
+    // -------------one time pad------------------------------------------------
     // TODO: include complexity theory primer
     // TODO: sketch proof (include)
     // TODO: look into TRNGs in rust (and roll your own by hand)
 
     // TODO: talk about relaxing, and approximating perfect secrecy --> practical secrecy aka TRNG -> PRNG
 
-    // -------------mt19937 cipher--------------------------------------------
+    // -------------mt19937 cipher----------------------------------------------
     // challenge 21: implement MT19937 RNG
     let seed = 1131464071u32;
     let seed_bytes = seed.to_be_bytes();
 
     let mut mt = rand::MT::from_seed(seed_bytes);
-    for _ in 0..10 {
+    for _ in 0..100 {
         let mut buf = [0u8; 4];
         mt.fill_bytes(&mut buf);
 
@@ -104,9 +104,12 @@ fn main() {
         println!("mt19937 random number: {x}");
     }
 
-    // -------------rc4 cipher------------------------------------------------
-    // -------------salsa20 cipher--------------------------------------------
-    // -------------chacha20 cipher-------------------------------------------
+    // -------------rc4 cipher--------------------------------------------------
+    // -------------pcg --------------------------------------------------------
+    // -------------xorshift----------------------------------------------------
+    // -------------xorshiro----------------------------------------------------
+
+    // -------------chacha20 cipher---------------------------------------------
 
     // ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____
     // ||B |||L |||O |||C |||K |||       |||C |||I |||P |||H |||E |||R |||S ||

@@ -95,7 +95,7 @@ fn main() {
     let seed = 1131464071u32;
     let seed_bytes = seed.to_be_bytes();
 
-    let mut mt = rand::MT::from_seed(seed_bytes);
+    let mut mt = rand::lfsr::MT::from_seed(seed_bytes);
     for _ in 0..100 {
         let mut buf = [0u8; 4];
         mt.fill_bytes(&mut buf);

@@ -1,7 +1,7 @@
-mod mersenne;
-mod xorshift;
+mod mt;
+// mod xorshift;
 
-pub use mersenne::*;
-pub use pcg::*;
-pub use xoroshiro::*;
-pub use xorshift::*;
+pub use mt::*;
+// pub use pcg::*;
+// pub use xoroshiro::*;
+// pub use xorshift::*;

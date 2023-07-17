@@ -9,11 +9,24 @@ use fuin::{attack, crypto, encode, rand};
 // - cloning
 // - paths
 
+// fuin encrypt --in=foo.txt --encoding=base64 --protocol=chacha20 --out=bar.txt
+// fuin encrypt --in=foo.txt --encoding=hex --out = bar.txt
+
+// fuin decrypt -i=foo.txt -e=hex -p=chacha20 -o=bar.txt
+
+// fuin generate --seed=12345 --protocol=mt19937
+
 /// Search for a pattern in a file and display the lines that contain it.
 #[derive(Parser)]
 struct Cli {
-    pattern: String,
-    path: path::PathBuf,
+    #[arg(short, long)]
+    encrypt: String,
+
+    #[arg(short, long)]
+    decrypt: String,
+
+    #[arg(short, long)]
+    generate: String,
 }
 
 fn main() {

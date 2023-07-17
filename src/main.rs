@@ -1,32 +1,67 @@
-use std::{io, path};
+use std::{
+    io::{self, BufRead, BufReader},
+    path,
+};
 
 use ::rand::prelude::*;
-use clap::Parser;
-use fuin::{attack, crypto, encode, rand};
+use clap::{Parser, Subcommand};
 
 // TODOs
 // - rust docs
 // - cloning
 // - paths
 
-// fuin encrypt --in=foo.txt --encoding=base64 --protocol=chacha20 --out=bar.txt
-// fuin encrypt --in=foo.txt --encoding=hex --out = bar.txt
+// TODO: accept files and stdin/stdout
 
-// fuin decrypt -i=foo.txt -e=hex -p=chacha20 -o=bar.txt
-
-// fuin generate --seed=12345 --protocol=mt19937
-
-/// Search for a pattern in a file and display the lines that contain it.
+/// commandline cryptographic protocols
 #[derive(Parser)]
+#[command(
+    author,
+    version,
+    about,
+    long_about = None
+)]
 struct Cli {
-    #[arg(short, long)]
-    encrypt: String,
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
 
-    #[arg(short, long)]
-    decrypt: String,
+#[derive(Subcommand)]
+enum Commands {
+    Encrypt {
+        #[arg(short, long)]
+        input: path::PathBuf,
 
-    #[arg(short, long)]
-    generate: String,
+        #[arg(short, long)]
+        encoding: String,
+
+        #[arg(short, long)]
+        protocol: String,
+
+        #[arg(short, long)]
+        output: path::PathBuf,
+    },
+
+    Decrypt {
+        #[arg(short, long)]
+        input: path::PathBuf,
+
+        #[arg(short, long)]
+        encoding: String,
+
+        #[arg(short, long)]
+        protocol: String,
+
+        #[arg(short, long)]
+        output: path::PathBuf,
+    },
+    GenerateKey {
+        #[arg(short, long)]
+        protocol: String,
+
+        #[arg(short, long)]
+        output: path::PathBuf,
+    },
 }
 
 fn main() {
@@ -43,7 +78,31 @@ fn main() {
     "
     );
 
-    let _args = Cli::parse();
+    let cli = Cli::parse();
+    match &cli.command {
+        Some(Commands::Encrypt {
+            input,
+            encoding,
+            protocol,
+            output,
+        }) => {
+            println!("encrypt");
+        }
+        Some(Commands::Decrypt {
+            input,
+            encoding,
+            protocol,
+            output,
+        }) => {
+            println!("decrypt");
+        }
+        Some(Commands::GenerateKey { protocol, output }) => {
+            println!("generate key");
+        }
+        None => {
+            println!("none");
+        }
+    };
 
     // test_runner();
 }
@@ -68,12 +127,12 @@ fn _test_runner() {
 
     // challenge 3: monoalphabetic vernam attack
     let cipher_text = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-    let plain_text = attack::vernam::monoalphabetic_attack(cipher_text);
+    let plain_text = fuin::attack::vernam::monoalphabetic_attack(cipher_text);
     println!("single byte XOR attack: {}", plain_text.unwrap().1);
 
     // challenge 4: monoalphabetic vernam attack (file variation)
     let path = "/Users/jeff/Documents/repos/fuin/src/monoalphabetic_vernam_ciphertext.txt";
-    let plain_text = attack::vernam::monoalphabetic_attack_file_variation(path);
+    let plain_text = fuin::attack::vernam::monoalphabetic_attack_file_variation(path);
     println!("single byte XOR from file attack: {}", plain_text);
 
     // -------------polyalphabetic "polyshift" ciphers--------------------------
@@ -91,18 +150,18 @@ fn _test_runner() {
     let plain_text = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
     let key = "ICE";
 
-    let cipher_text = crypto::stream::vernam_cipher_with_key(plain_text, key)
+    let cipher_text = fuin::crypto::stream::vernam_cipher_with_key(plain_text, key)
         .collect::<Result<Vec<u8>, io::Error>>()
         .unwrap()
         .into_iter();
-    let cipher_text_hex = encode::hex::ByteToHexEncoder::new(cipher_text) // TODO: look into iterators over references
+    let cipher_text_hex = fuin::encode::hex::ByteToHexEncoder::new(cipher_text) // TODO: look into iterators over references
         .collect::<Result<String, io::Error>>()
         .unwrap();
     println!("cipher_text_hex: {}", cipher_text_hex);
 
     // challenge 6: polyalphabetic vernam attack
     let path = "/Users/jeff/Documents/repos/fuin/src/polyalphabetic_vernam_ciphertext.txt";
-    let plain_text = attack::vernam::polyalphabetic_attack(path);
+    let plain_text = fuin::attack::vernam::polyalphabetic_attack(path);
     println!("polyalphabetic vernam attack: {}", plain_text);
 
     // joseph mauborgne recognized if the key was "endless and senseless",
@@ -122,7 +181,7 @@ fn _test_runner() {
     let seed = 1131464071u32;
     let seed_bytes = seed.to_be_bytes();
 
-    let mut mt = rand::lfsr::MT::from_seed(seed_bytes);
+    let mut mt = fuin::rand::lfsr::MT::from_seed(seed_bytes);
     for _ in 0..100 {
         let mut buf = [0u8; 4];
         mt.fill_bytes(&mut buf);

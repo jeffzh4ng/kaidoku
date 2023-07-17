@@ -1,12 +1,20 @@
-use std::io;
+use std::{io, path};
 
 use ::rand::prelude::*;
+use clap::Parser;
 use fuin::{attack, crypto, encode, rand};
 
 // TODOs
 // - rust docs
 // - cloning
 // - paths
+
+/// Search for a pattern in a file and display the lines that contain it.
+#[derive(Parser)]
+struct Cli {
+    pattern: String,
+    path: path::PathBuf,
+}
 
 fn main() {
     println!(
@@ -21,6 +29,8 @@ fn main() {
     888     \"Y88888 888 888  888
     "
     );
+
+    let args = Cli::parse();
 
     // ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____
     // ||S |||T |||R |||E |||A |||M |||       |||C |||I |||P |||H |||E |||R |||S ||

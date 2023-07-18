@@ -1,7 +1,7 @@
 use std::{io, vec};
 
-// TODO: store as bytes instead of chars because input is ascii. then the code below does not need to use .chars()
-const B64_MAP: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const B64_MAP: &[u8] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".as_bytes();
 
 #[derive(Copy, Clone, Debug)]
 enum DecodedByte {
@@ -108,8 +108,8 @@ where
                 255
             } else {
                 B64_MAP
-                    .chars() // TODO: avoid allocation?
-                    .position(|b64_char| b64_char == four_b64s[i as usize])
+                    .iter()
+                    .position(|&b64_char| b64_char == four_b64s[i as usize] as u8)
                     .unwrap() as u8
             };
 
@@ -225,10 +225,14 @@ where
         let four = three_bytes_packed & mask;
 
         // convert u32s to base64 chars
-        let one = B64_MAP.chars().nth(one as usize).unwrap();
-        let two = B64_MAP.chars().nth(two as usize).unwrap();
-        let three = B64_MAP.chars().nth(three as usize).unwrap();
-        let four = B64_MAP.chars().nth(four as usize).unwrap();
+        let one = B64_MAP[one as usize] as char;
+        let two = B64_MAP[two as usize] as char;
+        let three = B64_MAP[three as usize] as char;
+        let four = B64_MAP[four as usize] as char;
+
+        // let two = B64_MAP.nth(two as usize).unwrap();
+        // let three = B64_MAP.nth(three as usize).unwrap();
+        // let four = B64_MAP.nth(four as usize).unwrap();
 
         // pad with '=' if necessary
         let mut four_b64_chars = [one, two, three, four];

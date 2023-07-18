@@ -38,7 +38,7 @@ where
         }
 
         // process four b64 chars at a time
-        let mut four_b64_chars = vec![];
+        let mut four_b64_ascii_chars = vec![];
         let mut padding_count = 0;
 
         // read in four b64 chars
@@ -48,7 +48,7 @@ where
                     padding_count += 1;
                 }
 
-                four_b64_chars.push(c);
+                four_b64_ascii_chars.push(c as u8);
             } else {
                 if i == 0 {
                     return None; // exit on empty input
@@ -56,7 +56,7 @@ where
 
                 // add padding for missing chars
                 padding_count += 1;
-                four_b64_chars.push('=');
+                four_b64_ascii_chars.push(b'=');
             }
         }
 
@@ -68,7 +68,9 @@ where
         }
 
         // convert four base64 chars into three bytes
-        let three_bytes = self.four_b64s_to_three_bytes(four_b64_chars, padding_count);
+        let three_bytes = self
+            .four_b64s_to_three_bytes(four_b64_ascii_chars, padding_count)
+            .expect("Invalid input");
 
         self.output = [Some(three_bytes[1]), Some(three_bytes[2])];
         match three_bytes[0] {
@@ -99,17 +101,21 @@ where
 
     fn four_b64s_to_three_bytes(
         &self,
-        four_b64s: Vec<char>,
+        four_b64s: Vec<u8>,
         padding_count: i32,
-    ) -> [DecodedByte; 3] {
+    ) -> Result<[DecodedByte; 3], io::Error> {
         let mut four_bytes = vec![];
         for i in 0..4 - padding_count {
-            let b = if four_b64s[i as usize] == '=' {
+            let b = if four_b64s[i as usize] == b'=' {
                 255
             } else {
                 B64_MAP
                     .iter()
-                    .position(|&b64_char| b64_char == four_b64s[i as usize] as u8)
+                    .position(|&b64_char| b64_char == four_b64s[i as usize])
+                    .ok_or(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "Invalid padding.",
+                    ))
                     .unwrap() as u8
             };
 
@@ -125,23 +131,23 @@ where
         // encoding padding bytes as indexes > max(b64) = 63
         // the caller (iterator) will ignore these bytes
         if padding_count == 2 {
-            [
+            Ok([
                 DecodedByte::Value(byte_one),
                 DecodedByte::Padding,
                 DecodedByte::Padding,
-            ]
+            ])
         } else if padding_count == 1 {
-            [
+            Ok([
                 DecodedByte::Value(byte_one),
                 DecodedByte::Value(byte_two),
                 DecodedByte::Padding,
-            ]
+            ])
         } else {
-            [
+            Ok([
                 DecodedByte::Value(byte_one),
                 DecodedByte::Value(byte_two),
                 DecodedByte::Value(byte_three),
-            ]
+            ])
         }
     }
 }
@@ -229,10 +235,6 @@ where
         let two = B64_MAP[two as usize] as char;
         let three = B64_MAP[three as usize] as char;
         let four = B64_MAP[four as usize] as char;
-
-        // let two = B64_MAP.nth(two as usize).unwrap();
-        // let three = B64_MAP.nth(three as usize).unwrap();
-        // let four = B64_MAP.nth(four as usize).unwrap();
 
         // pad with '=' if necessary
         let mut four_b64_chars = [one, two, three, four];

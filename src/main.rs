@@ -10,6 +10,10 @@ use clap::{Parser, Subcommand};
 // - rust docs
 // - cloning
 // - paths
+// - better errors
+// - remove unwraps in vernam and hex modules
+// - lints
+// - move cryptopal text inputs
 
 // TODO: accept files and stdin/stdout
 

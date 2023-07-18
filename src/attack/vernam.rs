@@ -91,11 +91,7 @@ pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Option<(u8, String)> {
 
 pub fn monoalphabetic_attack_file_variation(path_location: &str) -> String {
     let path = Path::new(path_location);
-    let display = path.display();
-    let file = match fs::File::open(path) {
-        Err(why) => panic!("couldn't open {}: {}", display, why),
-        Ok(file) => file,
-    };
+    let file = fs::File::open(path).unwrap();
 
     let mut high_score = 0;
     let mut plain_text_with_high_score = String::new();
@@ -158,11 +154,7 @@ pub fn polyalphabetic_attack(path_location: &str) -> String {
 
 fn parse_and_decode_file(path_location: &str) -> Vec<u8> {
     let path = path::Path::new(path_location);
-    let display = path.display();
-    let file = match fs::File::open(path) {
-        Err(why) => panic!("couldn't open {}: {}", display, why),
-        Ok(file) => file,
-    };
+    let file = fs::File::open(path).unwrap();
     let contents = io::BufReader::new(file)
         .lines()
         .map(|line| line.unwrap())

@@ -154,24 +154,16 @@ mod tests {
         let mut mt = MT::from_seed(seed_bytes);
 
         let path = path::Path::new("./tests/data/mt_test_vector_1131464071.txt");
-        let display = path.display();
-        let file = match fs::File::open(path) {
-            Err(why) => panic!("couldn't open {}: {}", display, why),
-            Ok(file) => file,
-        };
+        let file = fs::File::open(path).unwrap();
 
         for line in io::BufReader::new(file).lines() {
-            match line {
-                Err(why) => panic!("error reading line: {}", why),
-                Ok(line) => {
-                    let mut buf = [0u8; 4];
-                    mt.fill_bytes(&mut buf);
-                    let actual_random_number = u32::from_be_bytes(buf);
+            let l = line.unwrap();
+            let mut buf = [0u8; 4];
+            mt.fill_bytes(&mut buf);
+            let actual_random_number = u32::from_be_bytes(buf);
 
-                    let expected_random_number: u32 = line.parse().expect("Invalid u32");
-                    assert_eq!(expected_random_number, actual_random_number)
-                }
-            }
+            let expected_random_number: u32 = l.parse().expect("Invalid u32");
+            assert_eq!(expected_random_number, actual_random_number)
         }
     }
 

@@ -170,11 +170,11 @@ fn _test_runner() {
     // this was later formalized by claude shannon in a classified report in 1945, and in a public one in 1949
 
     // -------------one time pad------------------------------------------------
-    // TODO: include complexity theory primer
-    // TODO: sketch proof (include)
-    // TODO: look into TRNGs in rust (and roll your own by hand)
+    // - include complexity theory primer
+    // - sketch proof (include)
+    // - look into TRNGs in rust (and roll your own by hand)
 
-    // TODO: talk about relaxing, and approximating perfect secrecy --> practical secrecy aka TRNG -> PRNG
+    // - talk about relaxing, and approximating perfect secrecy --> practical secrecy aka TRNG -> PRNG
 
     // -------------mt19937 cipher----------------------------------------------
     // challenge 21: implement MT19937 RNG

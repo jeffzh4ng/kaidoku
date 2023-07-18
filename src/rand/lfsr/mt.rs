@@ -50,7 +50,16 @@ impl RngCore for MT {
                 // MT generator was never seeded
                 // -> seed with constant value since RngCore.next_u32 cannot fail.
 
-                // TODO
+                let seed = 5489u32;
+                self.state[0] = seed;
+
+                // x_i = f[x_i+1 XOR ((x_i-1) >> (w-2)) ] + i
+                for i in 1..N {
+                    let rhs = self.state[i - 1] >> (32 - 2);
+                    let xor = (self.state[i - 1] ^ rhs) as u128;
+                    let x_i = xor * F + i as u128;
+                    self.state[i] = x_i as u32; // keeps only the least significant 32 bits
+                }
             }
 
             self.twist();

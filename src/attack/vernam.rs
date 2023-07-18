@@ -89,31 +89,27 @@ pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Option<(u8, String)> {
     Some(key_plain_text_tuple.clone())
 }
 
-pub fn monoalphabetic_attack_file_variation(path_location: &str) -> String {
+pub fn monoalphabetic_attack_file_variation(path_location: &str) -> Result<String, io::Error> {
     let path = Path::new(path_location);
-    let file = fs::File::open(path).unwrap();
+    let file = fs::File::open(path)?;
 
     let mut high_score = 0;
     let mut plain_text_with_high_score = String::new();
 
     let reader = io::BufReader::new(file);
     for line in reader.lines() {
-        match line {
-            Ok(cipher_text) => {
-                let plain_text = monoalphabetic_attack(&cipher_text);
+        let cipher_text = line?;
+        let plain_text = monoalphabetic_attack(&cipher_text);
 
-                if let Some((_k, p)) = plain_text {
-                    if high_score == 0 || score(&p) > high_score {
-                        high_score = score(&p);
-                        plain_text_with_high_score = p;
-                    }
-                }
+        if let Some((_k, p)) = plain_text {
+            if high_score == 0 || score(&p) > high_score {
+                high_score = score(&p);
+                plain_text_with_high_score = p;
             }
-            Err(why) => println!("error reading line: {}", why),
         }
     }
 
-    plain_text_with_high_score
+    Ok(plain_text_with_high_score)
 }
 
 #[derive(Eq, PartialEq)]

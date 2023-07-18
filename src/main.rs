@@ -11,7 +11,6 @@ use clap::{Parser, Subcommand};
 // - cloning
 // - paths
 // - better errors
-// - remove unwraps in vernam and hex modules
 // - lints
 // - move cryptopal text inputs
 
@@ -137,7 +136,7 @@ fn _test_runner() {
     // challenge 4: monoalphabetic vernam attack (file variation)
     let path = "/Users/jeff/Documents/repos/fuin/src/monoalphabetic_vernam_ciphertext.txt";
     let plain_text = fuin::attack::vernam::monoalphabetic_attack_file_variation(path);
-    println!("single byte XOR from file attack: {}", plain_text);
+    println!("single byte XOR from file attack: {}", plain_text.unwrap());
 
     // -------------polyalphabetic "polyshift" ciphers--------------------------
     // the cipher is attacked by kasiski examination variation

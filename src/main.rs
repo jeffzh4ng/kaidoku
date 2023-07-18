@@ -12,7 +12,6 @@ use clap::{Parser, Subcommand};
 // - paths
 // - better errors
 // - lints
-// - move cryptopal text inputs
 
 // TODO: accept files and stdin/stdout
 
@@ -134,7 +133,7 @@ fn _test_runner() {
     println!("single byte XOR attack: {}", plain_text.unwrap().1);
 
     // challenge 4: monoalphabetic vernam attack (file variation)
-    let path = "/Users/jeff/Documents/repos/fuin/src/monoalphabetic_vernam_ciphertext.txt";
+    let path = "/Users/jeff/Documents/repos/fuin/tests/data/monoalphabetic_vernam_ciphertext.txt";
     let plain_text = fuin::attack::vernam::monoalphabetic_attack_file_variation(path);
     println!("single byte XOR from file attack: {}", plain_text.unwrap());
 
@@ -163,7 +162,7 @@ fn _test_runner() {
     println!("cipher_text_hex: {}", cipher_text_hex);
 
     // challenge 6: polyalphabetic vernam attack
-    let path = "/Users/jeff/Documents/repos/fuin/src/polyalphabetic_vernam_ciphertext.txt";
+    let path = "/Users/jeff/Documents/repos/fuin/tests/data/polyalphabetic_vernam_ciphertext.txt";
     let plain_text = fuin::attack::vernam::polyalphabetic_attack(path);
     println!("polyalphabetic vernam attack: {}", plain_text);
 

@@ -1,7 +1,4 @@
-use std::{
-    io::{self, BufRead, BufReader},
-    path,
-};
+use std::{io, path};
 
 use ::rand::prelude::*;
 use clap::{Parser, Subcommand};

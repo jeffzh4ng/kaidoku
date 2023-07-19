@@ -68,9 +68,10 @@ where
         }
 
         // convert four base64 chars into three bytes
-        let three_bytes = self
-            .four_b64s_to_three_bytes(four_b64_ascii_chars, padding_count)
-            .expect("Invalid input");
+        let three_bytes = match self.four_b64s_to_three_bytes(four_b64_ascii_chars, padding_count) {
+            Ok(bytes) => bytes,
+            Err(e) => return Some(Err(e)),
+        };
 
         self.output = [Some(three_bytes[1]), Some(three_bytes[2])];
         match three_bytes[0] {

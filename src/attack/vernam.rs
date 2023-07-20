@@ -93,23 +93,21 @@ pub fn monoalphabetic_attack_file_variation(path_location: &str) -> Result<Strin
     let path = Path::new(path_location);
     let file = fs::File::open(path)?;
 
-    let mut high_score = 0;
-    let mut plain_text_with_high_score = String::new();
-
     let reader = io::BufReader::new(file);
-    for line in reader.lines() {
-        let cipher_text = line?;
-        let plain_text = monoalphabetic_attack(&cipher_text);
-
-        if let Some((_k, p)) = plain_text {
-            if high_score == 0 || score(&p) > high_score {
-                high_score = score(&p);
-                plain_text_with_high_score = p;
+    let plain_text_with_high_score = reader
+        .lines()
+        .collect::<Result<Vec<String>, io::Error>>()?
+        .into_iter()
+        .filter_map(|cipher_text| monoalphabetic_attack(&cipher_text))
+        .fold((0, String::new()), |(high_score, x), (_k, y)| {
+            if high_score == 0 || score(&y) > high_score {
+                (score(&y), y)
+            } else {
+                (high_score, x)
             }
-        }
-    }
+        });
 
-    Ok(plain_text_with_high_score)
+    Ok(plain_text_with_high_score.1)
 }
 
 #[derive(Eq, PartialEq)]

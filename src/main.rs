@@ -9,6 +9,7 @@ use clap::{Parser, Subcommand};
 // - paths
 // - anyhow errors?
 // - lints
+// - ci: build variant that pulls in the no_panic crate.
 
 // TODO: accept files and stdin/stdout
 

@@ -68,15 +68,10 @@ where
                 Ok(0b00000000)
             };
 
-            if let Err(e) = high_nibble {
-                return Some(Err(e));
+            match (high_nibble, low_nibble) {
+                (Err(e), _) | (_, Err(e)) => Some(Err(e)),
+                (Ok(high_nibble), Ok(low_nibble)) => Some(Ok(high_nibble << 4 | low_nibble)),
             }
-
-            if let Err(e) = low_nibble {
-                return Some(Err(e));
-            }
-
-            Some(Ok(high_nibble.unwrap() << 4 | low_nibble.unwrap()))
         } else {
             None
         }

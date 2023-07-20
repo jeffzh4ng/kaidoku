@@ -14,18 +14,17 @@ use crate::{
 const ENGLISH_FREQ: &str = "QZXJKVBWPYGMCFULDRHS NIOTAE";
 pub fn score(s: &str) -> i32 {
     s.chars().fold(0, |acc, c| {
-        if ENGLISH_FREQ.contains(c) {
-            return acc + ENGLISH_FREQ.chars().position(|x| x == c).unwrap() as i32 + 1;
+        if let Some(p) = ENGLISH_FREQ.chars().position(|x| x == c) {
+            acc + (p as i32 + 1)
+        } else {
+            acc
         }
-
-        acc
     })
 }
 
-pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Option<(u8, String)> {
+pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Result<(u8, String), io::Error> {
     let cipher_text = encode::hex::HexToByteDecoder::new(cipher_text_hex.chars())
-        .collect::<Result<Vec<u8>, io::Error>>()
-        .unwrap();
+        .collect::<Result<Vec<u8>, io::Error>>()?;
 
     // ciphertext: 1111 0000
     // keyspace:   0000 0001
@@ -47,18 +46,11 @@ pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Option<(u8, String)> {
             .into_iter();
 
         let plain_bytes = crypto::stream::VernamCipher::new(c, k_stretched.clone())
-            .collect::<Result<Vec<u8>, io::Error>>()
-            .unwrap();
-
-        let plain_text = String::from_utf8(plain_bytes.clone());
-
-        // check if plain bytes are invalid utf8
-        if plain_text.is_err() {
-            continue;
-        }
+            .collect::<Result<Vec<u8>, io::Error>>()?;
 
         // convert bytes to string, calculate the score, and store it in the map
-        let plain_text = plain_text.unwrap();
+        let plain_text = String::from_utf8(plain_bytes.clone())
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, "Invalid utf8 bytes."))?;
         let score = score(&plain_text);
         plain_text_scores.insert((k, plain_text), score);
     }
@@ -70,7 +62,10 @@ pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Option<(u8, String)> {
     plain_text_scores_tuples.sort_by(|a, b| b.1.cmp(&a.1));
 
     if plain_text_scores_tuples.is_empty() {
-        return None; // no valid plain text
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "plain text scores empty.",
+        ));
     }
 
     // if there's a tie, warn
@@ -81,12 +76,15 @@ pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Option<(u8, String)> {
     }
 
     if !&plain_text_scores_tuples[0].0 .1.as_bytes().is_ascii() {
-        return None;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "plain text with high score is not ascii",
+        ));
     }
 
     // select the plain text with the highest score
     let key_plain_text_tuple = &plain_text_scores_tuples[0].0;
-    Some(key_plain_text_tuple.clone())
+    Ok(key_plain_text_tuple.clone())
 }
 
 pub fn monoalphabetic_attack_file_variation(path_location: &str) -> Result<String, io::Error> {
@@ -98,7 +96,9 @@ pub fn monoalphabetic_attack_file_variation(path_location: &str) -> Result<Strin
         .lines()
         .collect::<Result<Vec<String>, io::Error>>()?
         .into_iter()
-        .filter_map(|cipher_text| monoalphabetic_attack(&cipher_text))
+        .map(|cipher_text| monoalphabetic_attack(&cipher_text))
+        .collect::<Result<Vec<(u8, String)>, io::Error>>()?
+        .into_iter()
         .fold((0, String::new()), |(high_score, x), (_k, y)| {
             if high_score == 0 || score(&y) > high_score {
                 (score(&y), y)

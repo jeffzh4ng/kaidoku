@@ -48,8 +48,9 @@ where
     type Item = Result<u8, io::Error>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.a.peek().is_some() && self.b.peek().is_some() {
-            let a = self.a.next().unwrap();
-            let b = self.b.next().unwrap();
+            let a = self.a.next()?;
+            let b = self.b.next()?;
+
             Some(Ok(a ^ b))
         } else if self.a.peek().is_none() && self.b.peek().is_none() {
             None

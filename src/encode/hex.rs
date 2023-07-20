@@ -54,6 +54,13 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(c) = self.input.next() {
+            if !c.is_ascii() {
+                return Some(Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Input is not ascii.",
+                )));
+            }
+
             let high_nibble = self.hex_to_nibble(c as u8);
             let low_nibble = if let Some(c) = self.input.next() {
                 self.hex_to_nibble(c as u8)

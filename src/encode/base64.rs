@@ -44,6 +44,13 @@ where
         // read in four b64 chars
         for i in 0..4 {
             if let Some(c) = self.input.next() {
+                if !c.is_ascii() {
+                    return Some(Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "Input is not ascii",
+                    )));
+                }
+
                 if c == '=' {
                     padding_count += 1;
                 }
@@ -110,14 +117,15 @@ where
             let b = if four_b64s[i as usize] == b'=' {
                 255
             } else {
-                B64_MAP
+                let position = B64_MAP
                     .iter()
                     .position(|&b64_char| b64_char == four_b64s[i as usize])
                     .ok_or(io::Error::new(
                         io::ErrorKind::InvalidInput,
-                        "Invalid padding.",
-                    ))
-                    .unwrap() as u8
+                        "Invalid b64 char.",
+                    ))?;
+
+                position as u8 // this can't fail due to B64_MAP length being 64
             };
 
             four_bytes.push(b);
@@ -254,7 +262,18 @@ where
 mod tests {
     use std::io;
 
-    use crate::encode::{base64, hex};
+    use crate::encode::{
+        base64::{self, Base64ToByteDecoder},
+        hex,
+    };
+
+    #[test]
+    fn base64_decoder_invalid_ascii() {
+        let input = "こんにちは";
+        assert!(Base64ToByteDecoder::new(input.chars())
+            .collect::<Result<Vec<u8>, io::Error>>()
+            .is_err());
+    }
 
     #[test]
     fn base64_decoder_zero_chars() {

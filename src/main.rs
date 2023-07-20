@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 // - rust docs
 // - cloning
 // - paths
-// - better errors
+// - anyhow errors?
 // - lints
 
 // TODO: accept files and stdin/stdout
@@ -54,6 +54,7 @@ enum Commands {
         #[arg(short, long)]
         output: path::PathBuf,
     },
+
     GenerateKey {
         #[arg(short, long)]
         protocol: String,

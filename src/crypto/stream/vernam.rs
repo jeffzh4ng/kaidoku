@@ -4,8 +4,15 @@ pub fn vernam_cipher_with_key<'a>(
     plain_text: &'a str,
     key: &'a str,
 ) -> Box<dyn Iterator<Item = Result<u8, io::Error>> + 'a> {
-    let plain_text_bytes = plain_text.chars().map(|c| c as u8);
-    let repeating_key_bytes = key.chars().cycle().take(plain_text.len()).map(|c| c as u8);
+    let plain_text_bytes = plain_text
+        .chars()
+        .flat_map(crate::encode::utils::char_to_bytes);
+
+    let repeating_key_bytes = key
+        .chars()
+        .cycle()
+        .take(plain_text.len())
+        .flat_map(crate::encode::utils::char_to_bytes);
 
     let xor_cipher = VernamCipher::new(plain_text_bytes, repeating_key_bytes);
     Box::new(xor_cipher)
@@ -86,6 +93,7 @@ mod tests {
                 .unwrap()
         )
     }
+
     #[test]
     fn xor_cipher_uneven_length() {
         let hex_decoder_a = HexToByteDecoder::new("F0".chars())
@@ -102,5 +110,14 @@ mod tests {
         let actual_output = xor_cipher.collect::<Result<Vec<u8>, io::Error>>();
 
         assert!(actual_output.is_err());
+    }
+
+    #[test]
+    fn xor_cipher_utf8() {
+        let plaintext = "こんにちは".as_bytes().iter().cloned();
+        let key = "こんこんこ".as_bytes().iter().cloned();
+        let xor_cipher = VernamCipher::new(plaintext, key);
+        let actual_output = xor_cipher.collect::<Result<Vec<u8>, io::Error>>();
+        assert!(actual_output.is_ok());
     }
 }

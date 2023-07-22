@@ -1,4 +1,4 @@
-use std::{io, path};
+use std::{io, path, thread, time::Duration};
 
 use ::rand::prelude::*;
 use clap::{Parser, Subcommand};
@@ -101,14 +101,12 @@ fn main() {
             println!("generate key");
         }
         None => {
-            println!("none");
+            test_runner();
         }
     };
-
-    // test_runner();
 }
 
-fn _test_runner() {
+fn test_runner() {
     // ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____
     // ||S |||T |||R |||E |||A |||M |||       |||C |||I |||P |||H |||E |||R |||S ||
     // ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
@@ -129,7 +127,7 @@ fn _test_runner() {
     // challenge 3: monoalphabetic vernam attack
     let cipher_text = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
     let plain_text = fuin::attack::vernam::monoalphabetic_attack(cipher_text);
-    println!("single byte XOR attack: {}", plain_text.unwrap().1);
+    println!("single byte XOR attack: {}", plain_text.unwrap().unwrap().1);
 
     // challenge 4: monoalphabetic vernam attack (file variation)
     let path = "/Users/jeff/Documents/repos/fuin/tests/data/monoalphabetic_vernam_ciphertext.txt";
@@ -181,15 +179,6 @@ fn _test_runner() {
     // challenge 21: implement MT19937 RNG
     let seed = 1131464071u32;
     let seed_bytes = seed.to_be_bytes();
-
-    let mut mt = fuin::rand::lfsr::MT::from_seed(seed_bytes);
-    for _ in 0..100 {
-        let mut buf = [0u8; 4];
-        mt.fill_bytes(&mut buf);
-
-        let x = u32::from_be_bytes(buf);
-        println!("mt19937 random number: {x}");
-    }
 
     // -------------rc4 cipher--------------------------------------------------
     // -------------pcg --------------------------------------------------------

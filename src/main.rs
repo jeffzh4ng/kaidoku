@@ -1,6 +1,7 @@
-use std::{io, path, thread, time::Duration};
+use std::{path, thread};
 
 use ::rand::prelude::*;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 // TODOs
@@ -9,6 +10,7 @@ use clap::{Parser, Subcommand};
 // - paths
 // - anyhow errors?
 // - lints
+// - more exhaustive tests (gpt)
 // - ci: build variant that pulls in the no_panic crate.
 
 // TODO: accept files and stdin/stdout
@@ -65,7 +67,7 @@ enum Commands {
     },
 }
 
-fn main() {
+fn main() -> Result<()> {
     println!(
         " 
     .d888           d8b          
@@ -88,6 +90,15 @@ fn main() {
             output,
         }) => {
             println!("encrypt");
+            let plain_text =
+                "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
+            let key = "ICE";
+
+            let cipher_text = fuin::crypto::stream::vernam_cipher_with_key(plain_text, key)
+                .collect::<Result<Vec<u8>, fuin::crypto::stream::VernamCipherError>>()
+                .context("unable to encrypt plaintext")?;
+            // .unwrap()
+            // .into_iter();
         }
         Some(Commands::Decrypt {
             input,
@@ -104,6 +115,8 @@ fn main() {
             test_runner();
         }
     };
+
+    Ok(())
 }
 
 fn test_runner() {
@@ -150,11 +163,11 @@ fn test_runner() {
     let key = "ICE";
 
     let cipher_text = fuin::crypto::stream::vernam_cipher_with_key(plain_text, key)
-        .collect::<Result<Vec<u8>, io::Error>>()
+        .collect::<Result<Vec<u8>, fuin::crypto::stream::VernamCipherError>>()
         .unwrap()
         .into_iter();
     let cipher_text_hex = fuin::encode::hex::ByteToHexEncoder::new(cipher_text) // TODO: look into iterators over references
-        .collect::<Result<String, io::Error>>()
+        .collect::<Result<String, fuin::encode::hex::HexEncodingError>>()
         .unwrap();
     println!("cipher_text_hex: {}", cipher_text_hex);
 
@@ -177,8 +190,22 @@ fn test_runner() {
 
     // -------------mt19937 cipher----------------------------------------------
     // challenge 21: implement MT19937 RNG
+
     let seed = 1131464071u32;
     let seed_bytes = seed.to_be_bytes();
+    let mut mt = fuin::rng::MT::from_seed(seed_bytes);
+
+    let handle = thread::spawn(move || {
+        for _ in 0..2 {
+            let mut buf = [0u8; 4];
+            mt.fill_bytes(&mut buf);
+
+            let x = u32::from_be_bytes(buf);
+            println!("mt19937 random number: {x}");
+        }
+    });
+
+    handle.join().unwrap();
 
     // -------------rc4 cipher--------------------------------------------------
     // -------------pcg --------------------------------------------------------

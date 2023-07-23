@@ -6,10 +6,21 @@ use std::{
     path::{self, Path},
 };
 
-use crate::{
-    crypto,
-    encode::{self},
-};
+use crate::{crypto, encode};
+
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum VernamAttackError {
+    #[error("Plain text with highest score is invalid ASCII")]
+    PlainTextAsciiError,
+
+    #[error(transparent)]
+    HexError(#[from] encode::hex::HexEncodingError),
+
+    #[error(transparent)]
+    VernamError(#[from] crypto::stream::VernamCipherError),
+}
 
 const ENGLISH_FREQ: &str = "QZXJKVBWPYGMCFULDRHS NIOTAE";
 pub fn score(s: &str) -> i32 {
@@ -22,9 +33,11 @@ pub fn score(s: &str) -> i32 {
     })
 }
 
-pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Result<Option<(u8, String)>, io::Error> {
+pub fn monoalphabetic_attack(
+    cipher_text_hex: &str,
+) -> Result<Option<(u8, String)>, VernamAttackError> {
     let cipher_text = encode::hex::HexToByteDecoder::new(cipher_text_hex.chars())
-        .collect::<Result<Vec<u8>, io::Error>>()?;
+        .collect::<Result<Vec<u8>, encode::hex::HexEncodingError>>()?;
 
     // ciphertext: 1111 0000
     // keyspace:   0000 0001
@@ -43,7 +56,7 @@ pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Result<Option<(u8, String
         let k_stretched = std::iter::repeat(k).take(cipher_text.len());
 
         let plain_bytes = crypto::stream::VernamCipher::new(c, k_stretched.clone())
-            .collect::<Result<Vec<u8>, io::Error>>()?;
+            .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()?;
 
         // convert bytes to string, calculate the score, and store it in the map
         let plain_text = String::from_utf8(plain_bytes);
@@ -78,10 +91,7 @@ pub fn monoalphabetic_attack(cipher_text_hex: &str) -> Result<Option<(u8, String
     }
 
     if !&plain_text_scores_tuples[0].0 .1.as_bytes().is_ascii() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "plain text with high score is not ascii",
-        ));
+        return Err(VernamAttackError::PlainTextAsciiError);
     }
 
     // select the plain text with the highest score
@@ -142,7 +152,7 @@ pub fn polyalphabetic_attack(path_location: &str) -> String {
 
     let plain_bytes =
         crypto::stream::VernamCipher::new(cipher_text_bytes.into_iter(), probable_key_stretched)
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()
             .unwrap();
     let plain_text = String::from_utf8(plain_bytes).unwrap();
 
@@ -239,7 +249,7 @@ fn find_probable_key(cipher_text_bytes: &[u8], probable_key_size: i32) -> Vec<u8
             // the single-byte (char) XOR key is the most likely key for that block
             // let s = String::from_utf8(b.clone()).unwrap();
             let hex_encoded_bytes = encode::hex::ByteToHexEncoder::new(b.clone().into_iter())
-                .collect::<Result<String, io::Error>>()
+                .collect::<Result<String, encode::hex::HexEncodingError>>()
                 .unwrap();
 
             let key_plain_text_tuple = monoalphabetic_attack(&hex_encoded_bytes);

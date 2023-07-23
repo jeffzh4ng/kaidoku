@@ -8,9 +8,11 @@ authors = ["jeff <zhang.jeffreyd@gmail.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.72"
 clap = { version = "4.3.11", features = ["derive"] }
 log = "0.4.19"
 rand = "0.8.5"
+thiserror = "1.0.44"
 
 [build-dependencies]
 bindgen = "0.66.1"

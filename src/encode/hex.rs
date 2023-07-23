@@ -1,4 +1,13 @@
-use std::io;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum HexEncodingError {
+    #[error("Input contains invalid ASCII")]
+    InvalidAscii,
+
+    #[error("Input contains invalid hex")]
+    InvalidHex,
+}
 
 pub struct HexToByteDecoder<I>
 where
@@ -20,7 +29,7 @@ impl<I> HexToByteDecoder<I>
 where
     I: Iterator<Item = char>,
 {
-    fn hex_to_nibble(&self, c: u8) -> Result<u8, io::Error> {
+    fn hex_to_nibble(&self, c: u8) -> Result<u8, HexEncodingError> {
         match c {
             b'0' => Ok(0x0),
             b'1' => Ok(0x1),
@@ -38,10 +47,7 @@ where
             b'd' | b'D' => Ok(0xD),
             b'e' | b'E' => Ok(0xE),
             b'f' | b'F' => Ok(0xF),
-            _ => Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Invalid nibble",
-            )),
+            _ => Err(HexEncodingError::InvalidHex),
         }
     }
 }
@@ -50,15 +56,12 @@ impl<I> Iterator for HexToByteDecoder<I>
 where
     I: Iterator<Item = char>,
 {
-    type Item = Result<u8, io::Error>;
+    type Item = Result<u8, HexEncodingError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(c) = self.input.next() {
             if !c.is_ascii() {
-                return Some(Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Input is not ascii.",
-                )));
+                return Some(Err(HexEncodingError::InvalidAscii));
             }
 
             let high_nibble = self.hex_to_nibble(c as u8);
@@ -80,7 +83,7 @@ where
 
 pub struct ByteToHexEncoder<I> {
     input: I,
-    output: [Option<Result<char, io::Error>>; 1],
+    output: [Option<Result<char, HexEncodingError>>; 1],
 }
 
 impl<I> ByteToHexEncoder<I>
@@ -99,7 +102,7 @@ impl<I> Iterator for ByteToHexEncoder<I>
 where
     I: Iterator<Item = u8>,
 {
-    type Item = Result<char, io::Error>;
+    type Item = Result<char, HexEncodingError>;
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(c) = self.output.iter_mut().find_map(|c| c.take()) {
             // return the next character from the output buffer, if any are present.
@@ -122,12 +125,9 @@ const HEX_CHARS: &[char] = &[
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
 ];
 impl<I> ByteToHexEncoder<I> {
-    fn nibble_to_hex_char(&self, nibble: u8) -> Result<char, io::Error> {
+    fn nibble_to_hex_char(&self, nibble: u8) -> Result<char, HexEncodingError> {
         if nibble > 15 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Invalid nibble",
-            ));
+            return Err(HexEncodingError::InvalidHex);
         }
 
         Ok(HEX_CHARS[nibble as usize])
@@ -136,13 +136,15 @@ impl<I> ByteToHexEncoder<I> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{string::String, vec::Vec};
+
     use super::*;
 
     #[test]
     fn hex_decoder_invalid_ascii() {
         let input = "こんにちは";
         assert!(HexToByteDecoder::new(input.chars())
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, HexEncodingError>>()
             .is_err());
     }
 
@@ -150,7 +152,7 @@ mod tests {
     fn hex_decoder_invalid_hex() {
         let input = "6G";
         assert!(HexToByteDecoder::new(input.chars())
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, HexEncodingError>>()
             .is_err());
     }
 
@@ -158,7 +160,9 @@ mod tests {
     fn hex_decoder_zero_bytes() {
         let input = "";
         let decoder = HexToByteDecoder::new(input.chars());
-        let actual_output = decoder.collect::<Result<Vec<u8>, io::Error>>().unwrap();
+        let actual_output = decoder
+            .collect::<Result<Vec<u8>, HexEncodingError>>()
+            .unwrap();
         let expected_output: Vec<u8> = Vec::new();
 
         assert_eq!(expected_output, actual_output);
@@ -168,7 +172,9 @@ mod tests {
     fn hex_decoder_one_byte() {
         let input = "6d";
         let decoder = HexToByteDecoder::new(input.chars());
-        let actual_output = decoder.collect::<Result<Vec<u8>, io::Error>>().unwrap();
+        let actual_output = decoder
+            .collect::<Result<Vec<u8>, HexEncodingError>>()
+            .unwrap();
         let expected_output = Vec::from([0x6d]);
 
         assert_eq!(expected_output, actual_output);
@@ -178,7 +184,9 @@ mod tests {
     fn hex_decoder_two_bytes() {
         let input = "6f6d";
         let decoder = HexToByteDecoder::new(input.chars());
-        let actual_output = decoder.collect::<Result<Vec<u8>, io::Error>>().unwrap();
+        let actual_output = decoder
+            .collect::<Result<Vec<u8>, HexEncodingError>>()
+            .unwrap();
         let expected_output = Vec::from([0x6f, 0x6d]);
 
         assert_eq!(expected_output, actual_output);
@@ -188,7 +196,9 @@ mod tests {
     fn hex_decoder_three_bytes() {
         let input = "6f6f6d";
         let decoder = HexToByteDecoder::new(input.chars());
-        let actual_output = decoder.collect::<Result<Vec<u8>, io::Error>>().unwrap();
+        let actual_output = decoder
+            .collect::<Result<Vec<u8>, HexEncodingError>>()
+            .unwrap();
         let expected_output = Vec::from([0x6f, 0x6f, 0x6d]);
 
         assert_eq!(expected_output, actual_output);
@@ -200,7 +210,9 @@ mod tests {
         let input = single_byte.iter().cloned();
 
         let encoder = ByteToHexEncoder::new(input);
-        let actual_output = encoder.collect::<Result<String, io::Error>>().unwrap();
+        let actual_output = encoder
+            .collect::<Result<String, HexEncodingError>>()
+            .unwrap();
 
         let expected_output = "6d";
         assert_eq!(expected_output, actual_output);
@@ -215,7 +227,9 @@ mod tests {
         let input = two_bytes.iter().cloned();
 
         let encoder = ByteToHexEncoder::new(input);
-        let actual_output = encoder.collect::<Result<String, io::Error>>().unwrap();
+        let actual_output = encoder
+            .collect::<Result<String, HexEncodingError>>()
+            .unwrap();
 
         let expected_output = "6f6d";
         assert_eq!(expected_output, actual_output);

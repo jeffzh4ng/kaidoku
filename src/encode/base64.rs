@@ -1,4 +1,6 @@
-use std::{io, vec};
+use std::io;
+
+use alloc::vec;
 
 const B64_MAP: &[u8] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".as_bytes();
@@ -393,7 +395,7 @@ mod tests {
     fn base64_encoder_zero_byte() {
         let input = "";
         let hex_decoder = hex::HexToByteDecoder::new(input.chars())
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, hex::HexEncodingError>>()
             .unwrap()
             .into_iter();
 
@@ -408,7 +410,7 @@ mod tests {
     fn base64_encoder_one_byte() {
         let input = "6d";
         let hex_decoder: std::vec::IntoIter<u8> = hex::HexToByteDecoder::new(input.chars())
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, hex::HexEncodingError>>()
             .unwrap()
             .into_iter();
 
@@ -424,7 +426,7 @@ mod tests {
     fn base64_encoder_two_bytes() {
         let input = "6f6d";
         let hex_decoder = hex::HexToByteDecoder::new(input.chars())
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, hex::HexEncodingError>>()
             .unwrap()
             .into_iter();
 
@@ -440,7 +442,7 @@ mod tests {
     fn base64_encoder_three_bytes() {
         let input = "6f6f6d";
         let hex_decoder = hex::HexToByteDecoder::new(input.chars())
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, hex::HexEncodingError>>()
             .unwrap()
             .into_iter();
 
@@ -457,7 +459,7 @@ mod tests {
         let input = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d";
 
         let hex_decoder = hex::HexToByteDecoder::new(input.chars())
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, hex::HexEncodingError>>()
             .unwrap()
             .into_iter();
 

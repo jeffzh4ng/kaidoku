@@ -12,6 +12,10 @@ use clap::{Parser, Subcommand};
 // - lints
 // - more exhaustive tests (gpt)
 // - ci: build variant that pulls in the no_panic crate.
+// - enable insecure crypto with feature
+// - disclaimer in README (like briansmith/ring)
+// - MSRV in README
+// - benchmarks
 
 // TODO: accept files and stdin/stdout
 

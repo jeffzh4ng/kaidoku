@@ -94,8 +94,8 @@ fn main() -> Result<()> {
                 "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
             let key = "ICE";
 
-            let cipher_text = fuin::crypto::stream::vernam_cipher_with_key(plain_text, key)
-                .collect::<Result<Vec<u8>, fuin::crypto::stream::VernamCipherError>>()
+            let cipher_text = fuin::crypto::vernam::vernam_cipher_with_key(plain_text, key)
+                .collect::<Result<Vec<u8>, fuin::crypto::vernam::VernamCipherError>>()
                 .context("unable to encrypt plaintext")?;
             // .unwrap()
             // .into_iter();
@@ -162,8 +162,8 @@ fn test_runner() {
     let plain_text = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
     let key = "ICE";
 
-    let cipher_text = fuin::crypto::stream::vernam_cipher_with_key(plain_text, key)
-        .collect::<Result<Vec<u8>, fuin::crypto::stream::VernamCipherError>>()
+    let cipher_text = fuin::crypto::vernam::vernam_cipher_with_key(plain_text, key)
+        .collect::<Result<Vec<u8>, fuin::crypto::vernam::VernamCipherError>>()
         .unwrap()
         .into_iter();
     let cipher_text_hex = fuin::encode::hex::ByteToHexEncoder::new(cipher_text) // TODO: look into iterators over references

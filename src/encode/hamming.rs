@@ -5,7 +5,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum HammingDistanceError {
     #[error(transparent)]
-    VernamError(#[from] crypto::stream::VernamCipherError),
+    VernamError(#[from] crypto::vernam::VernamCipherError),
 }
 
 pub fn distance<I, J>(a: I, b: J) -> Result<usize, HammingDistanceError>
@@ -13,8 +13,8 @@ where
     I: Iterator<Item = u8>,
     J: Iterator<Item = u8>,
 {
-    let xor_cipher = crypto::stream::VernamCipher::new(a, b)
-        .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()?;
+    let xor_cipher = crypto::vernam::VernamCipher::new(a, b)
+        .collect::<Result<Vec<u8>, crypto::vernam::VernamCipherError>>()?;
 
     // we can use the hamming weight (population count of the XOR) to calculate the hamming distance
     // the number of 1s in the XOR is the number of bits that are different between the two inputs

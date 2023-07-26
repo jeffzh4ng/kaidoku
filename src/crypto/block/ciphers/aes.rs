@@ -12,7 +12,7 @@ impl BlockCipher for Aes128 {
         Aes128 { key }
     }
 
-    fn encrypt_block(&self, block: &mut Self::Block) {
+    fn encrypt_block(&self, block: &Self::Block) -> Self::Block {
         let round_keys = self.key_expansion(&self.key);
 
         for round in 1..10 {
@@ -29,7 +29,7 @@ impl BlockCipher for Aes128 {
         todo!()
     }
 
-    fn decrypt_block(&self, block: &mut Self::Block) {
+    fn decrypt_block(&self, block: &Self::Block) -> Self::Block {
         todo!()
     }
 }
@@ -38,10 +38,10 @@ impl Aes128 {
     fn key_expansion(&self, key: &[u8; 16]) -> Vec<[u8; 16]> {
         todo!()
     }
-    fn sub_bytes(&self, block: &mut [u8; 16]) {}
-    fn shift_rows(&self, block: &mut [u8; 16]) {}
-    fn mix_cols(&self, block: &mut [u8; 16]) {}
-    fn add_round_key(&self, block: &mut [u8; 16], key: &[u8; 16]) {}
+    fn sub_bytes(&self, block: &[u8; 16]) {}
+    fn shift_rows(&self, block: &[u8; 16]) {}
+    fn mix_cols(&self, block: &[u8; 16]) {}
+    fn add_round_key(&self, block: &[u8; 16], key: &[u8; 16]) {}
 }
 
 #[cfg(test)]

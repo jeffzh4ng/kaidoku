@@ -26,7 +26,7 @@
 use thiserror::Error;
 
 /// Errors that can occur during hex encoding/decoding.
-#[derive(Error, Debug)]
+#[derive(Error, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum HexEncodingError {
     /// Occurs when the input string for decoding contains non-ASCII characters.
     #[error("Input contains invalid ASCII")]
@@ -38,6 +38,7 @@ pub enum HexEncodingError {
 }
 
 /// An iterator that decodes a hex-encoded string to bytes.
+#[derive(Error, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct HexToByteDecoder<I>
 where
     I: Iterator<Item = char>,
@@ -112,6 +113,7 @@ where
 }
 
 /// An iterator that encodes bytes to hex characters.
+#[derive(Error, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ByteToHexEncoder<I> {
     input: I,
     output: [Option<Result<char, HexEncodingError>>; 1],

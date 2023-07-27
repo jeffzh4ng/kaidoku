@@ -37,13 +37,20 @@ use alloc::vec;
 const B64_MAP: &[u8] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".as_bytes();
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum DecodedByte {
     Value(u8),
     Padding,
 }
 
+impl Default for DecodedByte {
+    fn default() -> Self {
+        DecodedByte::Value(0)
+    }
+}
+
 /// An iterator that decodes base64 characters to bytes.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Base64ToByteDecoder<I> {
     input: I,
     output: [Option<DecodedByte>; 2],
@@ -198,6 +205,7 @@ where
 }
 
 /// An iterator that encodes bytes to base64 characters.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ByteToBase64Encoder<I>
 where
     I: Iterator<Item = u8>,

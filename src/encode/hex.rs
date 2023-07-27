@@ -29,11 +29,11 @@ use thiserror::Error;
 #[derive(Error, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum HexEncodingError {
     /// Occurs when the input string for decoding contains non-ASCII characters.
-    #[error("Input contains invalid ASCII")]
+    #[error("input contains invalid ASCII")]
     InvalidAscii,
 
     /// Occurs when the input string for decoding contains non-hexadecimal characters.
-    #[error("Input contains invalid hex")]
+    #[error("input contains invalid hex")]
     InvalidHex,
 }
 

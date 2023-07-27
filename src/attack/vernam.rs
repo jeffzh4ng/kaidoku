@@ -12,7 +12,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum VernamAttackError {
-    #[error("Plain text with highest score is invalid ASCII")]
+    #[error("plain text with highest score is invalid ASCII")]
     PlainTextAsciiError,
 
     #[error(transparent)]

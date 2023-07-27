@@ -5,7 +5,6 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 // TODOs
-// - rust docs
 // - cloning
 // - paths
 // - anyhow errors?

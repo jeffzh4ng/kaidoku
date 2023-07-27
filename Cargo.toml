@@ -2,8 +2,14 @@
 name = "fuin"
 version = "0.1.0"
 edition = "2021"
-
 authors = ["jeff <zhang.jeffreyd@gmail.com>"]
+description = "Unaudited crypto protocols intended for educational and experimental use cases"
+license = "MIT"
+license-file = "LICENSE.md"
+repository = "https://github.com/jeffzh4ng/fuin"
+keywords = ["cryptography"]
+categories = ["cryptography", "command-line-utilities"]
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

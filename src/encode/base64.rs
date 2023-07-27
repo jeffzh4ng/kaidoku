@@ -1,3 +1,35 @@
+//! This module provides utilities to encode and decode Base64 strings.
+//!
+//! It includes two structures, `Base64ToByteDecoder` and `ByteToBase64Encoder`, which are
+//! implemented as iterators over characters for a decoder and bytes for an encoder respectively.
+//! This enables the processing of large Base64 strings without loading the entire string into memory.
+//!
+//! # Examples
+//!
+//! Encoding a string into Base64:
+//!
+//! ```rust
+//! use fuin::encode::base64::ByteToBase64Encoder;
+//!
+//! let data = b"Hello, World!";
+//! let mut encoder = ByteToBase64Encoder::new(data.iter().cloned());
+//! let encoded: String = encoder.collect();
+//!
+//! assert_eq!(encoded, "SGVsbG8sIFdvcmxkIQ==");
+//! ```
+//!
+//! Decoding a Base64 string into bytes:
+//!
+//! ```rust
+//! use fuin::encode::base64::Base64ToByteDecoder;
+//!
+//! let data = "SGVsbG8sIFdvcmxkIQ==";
+//! let mut decoder = Base64ToByteDecoder::new(data.chars());
+//! let decoded: Vec<u8> = decoder.collect::<Result<_, _>>().unwrap();
+//!
+//! assert_eq!(decoded, b"Hello, World!");
+//! ```
+
 use std::io;
 
 use alloc::vec;
@@ -11,6 +43,7 @@ enum DecodedByte {
     Padding,
 }
 
+/// An iterator that decodes base64 characters to bytes.
 pub struct Base64ToByteDecoder<I> {
     input: I,
     output: [Option<DecodedByte>; 2],
@@ -20,6 +53,7 @@ impl<I> Base64ToByteDecoder<I>
 where
     I: Iterator<Item = char>,
 {
+    /// Creates a new base64 to byte decoder.
     pub fn new(input: I) -> Self {
         Base64ToByteDecoder {
             input,
@@ -163,6 +197,7 @@ where
     }
 }
 
+/// An iterator that encodes bytes to base64 characters.
 pub struct ByteToBase64Encoder<I>
 where
     I: Iterator<Item = u8>,
@@ -227,6 +262,7 @@ impl<I> ByteToBase64Encoder<I>
 where
     I: Iterator<Item = u8>,
 {
+    /// Creates a new byte to base64 encoder.
     pub fn new(input: I) -> Self {
         ByteToBase64Encoder {
             input,
@@ -264,15 +300,12 @@ where
 mod tests {
     use std::io;
 
-    use crate::encode::{
-        base64::{self, Base64ToByteDecoder},
-        hex,
-    };
+    use crate::encode::{base64, hex};
 
     #[test]
     fn base64_decoder_invalid_ascii() {
         let input = "こんにちは";
-        assert!(Base64ToByteDecoder::new(input.chars())
+        assert!(base64::Base64ToByteDecoder::new(input.chars())
             .collect::<Result<Vec<u8>, io::Error>>()
             .is_err());
     }

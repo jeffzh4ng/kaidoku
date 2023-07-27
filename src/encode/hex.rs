@@ -1,14 +1,42 @@
+//! This module provides utilities to encode and decode bytes to/from hexadecimal representation.
+//! This includes the `HexToByteDecoder` struct to decode hexadecimal strings to bytes,
+//! and the `ByteToHexEncoder` struct to encode bytes into hexadecimal strings.
+//!
+//! # Examples
+//!
+//! Decoding a hex string to bytes:
+//!
+//! ```rust
+//! use fuin::encode::hex::{HexToByteDecoder, HexEncodingError};
+//!
+//! let decoder = HexToByteDecoder::new("6f6f6d".chars());
+//! let decoded_bytes = decoder.collect::<Result<Vec<u8>, HexEncodingError>>().unwrap();
+//! assert_eq!(decoded_bytes, Vec::from([0x6f, 0x6f, 0x6d]));
+//! ```
+//!
+//! Encoding a byte stream to hex
+//!
+//! ``` rust
+//! use fuin::encode::hex::{ByteToHexEncoder, HexEncodingError};
+//! let encoder = ByteToHexEncoder::new(vec![0x6f, 0x6f, 0x6d].into_iter());
+//! let encoded_string = encoder.collect::<Result<String, HexEncodingError>>().unwrap();
+//! assert_eq!(encoded_string, "6f6f6d");
+//! ```
 use thiserror::Error;
 
+/// Errors that can occur during hex encoding/decoding.
 #[derive(Error, Debug)]
 pub enum HexEncodingError {
+    /// Occurs when the input string for decoding contains non-ASCII characters.
     #[error("Input contains invalid ASCII")]
     InvalidAscii,
 
+    /// Occurs when the input string for decoding contains non-hexadecimal characters.
     #[error("Input contains invalid hex")]
     InvalidHex,
 }
 
+/// An iterator that decodes a hex-encoded string to bytes.
 pub struct HexToByteDecoder<I>
 where
     I: Iterator<Item = char>,
@@ -20,6 +48,7 @@ impl<I> HexToByteDecoder<I>
 where
     I: Iterator<Item = char> + Clone,
 {
+    /// Create a new HexToByteDecoder with the given input iterator.
     pub fn new(input: I) -> Self {
         HexToByteDecoder { input }
     }
@@ -81,6 +110,7 @@ where
     }
 }
 
+/// An iterator that encodes bytes to hex characters.
 pub struct ByteToHexEncoder<I> {
     input: I,
     output: [Option<Result<char, HexEncodingError>>; 1],
@@ -90,6 +120,7 @@ impl<I> ByteToHexEncoder<I>
 where
     I: Iterator<Item = u8>,
 {
+    /// Creates a new byte to hex encoder.
     pub fn new(bytes: I) -> Self {
         ByteToHexEncoder {
             input: bytes,

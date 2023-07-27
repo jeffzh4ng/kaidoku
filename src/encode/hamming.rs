@@ -1,13 +1,61 @@
+//! This module provides utilities for calculating the Hamming distance
+//! between two sequences of bytes.
+//!
+//! The main functionality is provided by the `distance` function, which
+//! calculates the Hamming distance by treating the input sequences as
+//! Vernam cipher keys and counting the number of differing bits.
+//!
+//! This module also defines a `HammingDistanceError` for error handling,
+//! specifically when the sequences do not have equal lengths.
+//!
+//! # Examples
+//!
+//! ```rust
+//! use fuin::encode::hamming::distance;
+//!
+//! let a = "this is a test".bytes();
+//! let b = "wokka wokka!!!".bytes();
+//!
+//! let expected_hamming_distance = 37;
+//! let actual_hamming_distance = distance(a, b).unwrap();
+//!
+//! assert_eq!(expected_hamming_distance, actual_hamming_distance);
+//! ```
+
 use crate::crypto;
 
 use thiserror::Error;
 
+/// Error type for Hamming distance calculations.
+///
+/// This type is a wrapper around the `VernamCipherError` provided by the
+/// `crypto::vernam` module. It represents errors that may occur during the
+/// process of calculating the Hamming distance between two sequences of bytes.
 #[derive(Debug, Error)]
 pub enum HammingDistanceError {
+    /// Wrapper around the Vernam cipher error
     #[error(transparent)]
     VernamError(#[from] crypto::vernam::VernamCipherError),
 }
 
+/// Calculate the Hamming distance between two sequences of bytes.
+///
+/// The Hamming distance is calculated by treating the input sequences as
+/// Vernam cipher keys and counting the number of differing bits.
+///
+/// # Examples
+///
+/// ```rust
+/// use fuin::encode::hamming::distance;
+///
+/// let a = "this is a test".bytes();
+/// let b = "wokka wokka!!!".bytes();
+///
+/// let expected_hamming_distance = 37;
+/// let actual_hamming_distance = distance(a, b).unwrap();
+///
+/// assert_eq!(expected_hamming_distance, actual_hamming_distance);
+/// ```
 pub fn distance<I, J>(a: I, b: J) -> Result<usize, HammingDistanceError>
 where
     I: Iterator<Item = u8>,

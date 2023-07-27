@@ -1,4 +1,5 @@
 //! This module provides utilities to encode and decode bytes to/from hexadecimal representation.
+//!
 //! This includes the `HexToByteDecoder` struct to decode hexadecimal strings to bytes,
 //! and the `ByteToHexEncoder` struct to encode bytes into hexadecimal strings.
 //!

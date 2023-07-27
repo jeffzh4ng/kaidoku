@@ -34,11 +34,7 @@
 //! ```
 //!
 //! Please check each submodule for more detailed examples and documentation.
-//!
-//! [`base64`]: base64/
-//! [`hamming`]: hamming/
-//! [`hex`]: hex/
-//! [`utils`]: utils/
+
 pub mod base64;
 pub mod hamming;
 pub mod hex;

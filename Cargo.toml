@@ -10,8 +10,9 @@ repository = "https://github.com/jeffzh4ng/fuin"
 keywords = ["cryptography"]
 categories = ["cryptography", "command-line-utilities"]
 
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["insecure"]
+insecure = []
 
 [dependencies]
 anyhow = "1.0.72"

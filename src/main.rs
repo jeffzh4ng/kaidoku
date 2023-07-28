@@ -7,12 +7,7 @@ use clap::{Parser, Subcommand};
 // TODOs
 // - cloning
 // - paths
-// - anyhow errors?
 // - lints
-// - more exhaustive tests (gpt)
-// - ci: build variant that pulls in the no_panic crate.
-// - enable insecure crypto with feature
-// - MSRV in README
 // - benchmarks
 
 // TODO: accept files and stdin/stdout

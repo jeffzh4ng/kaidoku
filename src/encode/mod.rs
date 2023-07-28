@@ -1,5 +1,5 @@
 //! # Encoding and Decoding Utilities
-//! This module provides various utilities for encoding and decoding data.
+//! This module provides various utilities for lazily encoding and decoding data.
 //! This includes Base64, Hamming, Hexadecimal conversions, and a few utility functions.
 //!
 //! The functionalities are organized into separate submodules:

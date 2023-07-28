@@ -5,10 +5,10 @@
 /// # Examples
 ///
 /// ```
-/// use this_module::char_to_bytes;
+/// use fuin::encode::utils;
 ///
 /// let c = '漢';
-/// let bytes = char_to_bytes(c);
+/// let bytes = utils::char_to_bytes(c);
 /// assert_eq!(bytes, vec![230, 188, 162]);
 /// ```
 ///

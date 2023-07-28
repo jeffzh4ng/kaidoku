@@ -19,7 +19,7 @@ pub enum VernamAttackError {
     HexError(#[from] encode::hex::HexEncodingError),
 
     #[error(transparent)]
-    VernamError(#[from] crypto::vernam::VernamCipherError),
+    VernamError(#[from] crypto::stream::VernamCipherError),
 }
 
 const ENGLISH_FREQ: &str = "QZXJKVBWPYGMCFULDRHS NIOTAE";
@@ -55,8 +55,8 @@ pub fn monoalphabetic_attack(
         let c = cipher_text.clone().into_iter();
         let k_stretched = std::iter::repeat(k).take(cipher_text.len());
 
-        let plain_bytes = crypto::vernam::VernamCipher::new(c, k_stretched.clone())
-            .collect::<Result<Vec<u8>, crypto::vernam::VernamCipherError>>()?;
+        let plain_bytes = crypto::stream::VernamCipher::new(c, k_stretched.clone())
+            .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()?;
 
         // convert bytes to string, calculate the score, and store it in the map
         let plain_text = String::from_utf8(plain_bytes);
@@ -151,8 +151,8 @@ pub fn polyalphabetic_attack(path_location: &str) -> String {
         .take(cipher_text_bytes.len());
 
     let plain_bytes =
-        crypto::vernam::VernamCipher::new(cipher_text_bytes.into_iter(), probable_key_stretched)
-            .collect::<Result<Vec<u8>, crypto::vernam::VernamCipherError>>()
+        crypto::stream::VernamCipher::new(cipher_text_bytes.into_iter(), probable_key_stretched)
+            .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()
             .unwrap();
     let plain_text = String::from_utf8(plain_bytes).unwrap();
 

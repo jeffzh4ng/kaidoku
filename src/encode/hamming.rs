@@ -35,7 +35,7 @@ use thiserror::Error;
 pub enum HammingDistanceError {
     /// Wrapper around the Vernam cipher error
     #[error(transparent)]
-    VernamError(#[from] crypto::vernam::VernamCipherError),
+    VernamError(#[from] crypto::stream::VernamCipherError),
 }
 
 /// Calculate the Hamming distance between two sequences of bytes.
@@ -61,8 +61,8 @@ where
     I: Iterator<Item = u8>,
     J: Iterator<Item = u8>,
 {
-    let xor_cipher = crypto::vernam::VernamCipher::new(a, b)
-        .collect::<Result<Vec<u8>, crypto::vernam::VernamCipherError>>()?;
+    let xor_cipher = crypto::stream::VernamCipher::new(a, b)
+        .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()?;
 
     // we can use the hamming weight (population count of the XOR) to calculate the hamming distance
     // the number of 1s in the XOR is the number of bits that are different between the two inputs

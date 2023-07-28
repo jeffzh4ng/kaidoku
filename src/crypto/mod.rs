@@ -1,4 +1,4 @@
 pub mod block;
-pub mod vernam;
+pub mod stream;
 
 pub trait StreamCipher {}

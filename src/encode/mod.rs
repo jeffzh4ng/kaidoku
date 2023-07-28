@@ -14,7 +14,7 @@
 //! # Examples
 //!  
 //! ```rust
-//! use encode::{base64, hamming, hex, utils};
+//! use fuin::encode::{base64, hamming, hex, utils};
 //!
 //! // Example usage of the base64 submodule
 //! let base64_encoded = base64::encode("Hello, world!");

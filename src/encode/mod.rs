@@ -17,20 +17,23 @@
 //! use fuin::encode::{base64, hamming, hex, utils};
 //!
 //! // Example usage of the base64 submodule
-//! let base64_encoded = base64::encode("Hello, world!");
-//! println!("{}", base64_encoded);
-//!
-//! // Example usage of the hamming submodule
-//! let distance = hamming::distance("this is a test".bytes(), "wokka wokka!!!".bytes()).unwrap();
-//! println!("{}", distance);
+//! let data = b"Hello, World!";
+//! let mut encoder = base64::ByteToBase64Encoder::new(data.iter().cloned());
+//! let encoded: String = encoder.collect();
 //!
 //! // Example usage of the hex submodule
-//! let hex_encoded = hex::encode("Hello, world!");
-//! println!("{}", hex_encoded);
+//! let encoder = hex::ByteToHexEncoder::new(vec![0x6f, 0x6f, 0x6d].into_iter());
+//! let encoded_string = encoder.collect::<Result<String, hex::HexEncodingError>>().unwrap();
+//!
+//! // Example usage of the hamming submodule
+//! let a = "this is a test".bytes();
+//! let b = "wokka wokka!!!".bytes();
+//!
+//! let actual_hamming_distance = hamming::distance(a, b).unwrap();
 //!
 //! // Example usage of the utils submodule
-//! let bytes = utils::char_to_bytes('A');
-//! println!("{:?}", bytes);
+//! let c = '漢';
+//! let bytes = utils::char_to_bytes(c);
 //! ```
 //!
 //! Please check each submodule for more detailed examples and documentation.

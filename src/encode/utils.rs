@@ -9,7 +9,7 @@
 ///
 /// let c = '漢';
 /// let bytes = utils::char_to_bytes(c);
-/// assert_eq!(bytes, vec![230, 188, 162]);
+/// assert_eq!(bytes, vec![0xe6, 0xbc, 0xa2, 0x0]);
 /// ```
 ///
 /// # Note

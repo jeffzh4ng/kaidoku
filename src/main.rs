@@ -5,12 +5,8 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 // TODOs
-// - cloning
-// - paths
-// - lints
-// - benchmarks
-
-// TODO: accept files and stdin/stdout
+// - cli: files, stdin
+// - cd: lints, benchmarks, msrv, tests
 
 /// commandline cryptographic protocols
 #[derive(Parser)]

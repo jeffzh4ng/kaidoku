@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 // TODOs
+// - remove clones made to satisfy borrow checker
 // - generic array
 // - cli: files, stdin
 // - cd: lints, benchmarks, msrv, tests

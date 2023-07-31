@@ -26,6 +26,7 @@
 use thiserror::Error;
 
 /// Errors that can occur during hex encoding/decoding.
+#[non_exhaustive]
 #[derive(Error, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum HexEncodingError {
     /// Occurs when the input string for decoding contains non-ASCII characters.

@@ -31,6 +31,7 @@ use thiserror::Error;
 /// This type is a wrapper around the `VernamCipherError` provided by the
 /// `crypto::vernam` module. It represents errors that may occur during the
 /// process of calculating the Hamming distance between two sequences of bytes.
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum HammingDistanceError {
     /// Wrapper around the Vernam cipher error

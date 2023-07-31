@@ -10,6 +10,7 @@ use crate::{crypto, encode};
 
 use thiserror::Error;
 
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum VernamAttackError {
     #[error("plain text with highest score is invalid ASCII")]

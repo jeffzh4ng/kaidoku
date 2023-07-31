@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 // TODOs
+// - generic array
 // - cli: files, stdin
 // - cd: lints, benchmarks, msrv, tests
 

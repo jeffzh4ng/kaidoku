@@ -1,6 +1,7 @@
 use std::iter;
 use thiserror::Error;
 
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum VernamCipherError {
     #[error("input length not equal")]

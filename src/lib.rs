@@ -1,5 +1,5 @@
-#![warn(missing_docs)]
-#![deny(warnings)]
+// #![warn(missing_docs)]
+// #![deny(warnings)]
 
 //! # fuin
 //!

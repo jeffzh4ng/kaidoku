@@ -1,36 +1,47 @@
+use std::marker;
+
+use generic_array::ArrayLength;
+
 use super::super::ciphers::BlockCipher;
-use super::super::pads::{Padder, UnpaddedBytes};
+use super::super::pads::Padder;
+use super::super::Block;
 use super::BlockMode;
 
-pub struct Ecb<C: BlockCipher, P: Padder<C>> {
+pub struct Ecb<N, C, P>
+where
+    N: ArrayLength<u8>,
+    C: BlockCipher<N>,
+    P: Padder<N>,
+{
     cipher: C,
     padder: P,
+    _marker: marker::PhantomData<N>, // required since N ties C and P together without being used directly
 }
 
-impl<C, P> BlockMode<C, P> for Ecb<C, P>
-where
-    C: BlockCipher,
-    P: Padder<C>,
-{
+impl<N: ArrayLength<u8>, C: BlockCipher<N>, P: Padder<N>> BlockMode<N, C, P> for Ecb<N, C, P> {
     fn new(cipher: C, padder: P) -> Self {
-        Ecb { cipher, padder }
+        Ecb {
+            cipher,
+            padder,
+            _marker: marker::PhantomData,
+        }
     }
 
-    fn encrypt(&mut self, plaintext: UnpaddedBytes) -> Vec<C::Block> {
+    fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<Block<N>> {
         let ciphertext_blocks = self
             .padder
             .pad(plaintext)
             .iter()
-            .map(|plaintext_block| self.cipher.encrypt_block(plaintext_block))
+            .map(|plaintext_block| self.cipher.encrypt_block(*plaintext_block))
             .collect();
 
         ciphertext_blocks
     }
 
-    fn decrypt(&mut self, ciphertext: Vec<C::Block>) -> UnpaddedBytes {
+    fn decrypt(&mut self, ciphertext: Vec<Block<N>>) -> Vec<u8> {
         let plaintext_blocks = ciphertext
             .iter()
-            .map(|ciphertext_block| self.cipher.decrypt_block(ciphertext_block))
+            .map(|ciphertext_block| self.cipher.decrypt_block(*ciphertext_block))
             .collect();
 
         self.padder.unpad(plaintext_blocks)

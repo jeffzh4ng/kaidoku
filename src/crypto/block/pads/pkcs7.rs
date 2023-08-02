@@ -27,8 +27,8 @@ use super::Padder;
 pub struct Pkcs7 {}
 
 impl<N: ArrayLength<u8>> Padder<N> for Pkcs7 {
-    fn pad(&self, plaintext: Vec<u8>) -> Vec<Block<N>> {
-        let mut byte_stream = plaintext;
+    fn pad(&self, plain_text: Vec<u8>) -> Vec<Block<N>> {
+        let mut byte_stream = plain_text;
         let block_size = N::to_usize();
         let remainder = byte_stream.len() % block_size;
 
@@ -49,14 +49,14 @@ impl<N: ArrayLength<u8>> Padder<N> for Pkcs7 {
             .collect()
     }
 
-    fn unpad(&self, ciphertext: Vec<Block<N>>) -> Vec<u8> {
-        let last_block = ciphertext[ciphertext.len() - 1];
+    fn unpad(&self, cipher_text: Vec<Block<N>>) -> Vec<u8> {
+        let last_block = cipher_text[cipher_text.len() - 1];
         let last_byte = last_block[last_block.len() - 1];
 
-        let byte_stream = ciphertext
+        let byte_stream = cipher_text
             .into_iter()
             .flat_map(|b| b.as_slice())
-            .take(ciphertext.len() - last_byte as usize)
+            .take(cipher_text.len() - last_byte as usize)
             .cloned(); // TODO: is there a way to get [T] instead of [&T] from GenericArray<u8, N>
 
         byte_stream.collect()

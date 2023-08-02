@@ -4,9 +4,7 @@ use super::super::Block;
 use super::Padder;
 
 // A Padder that implements pre-IETF CMS PKCS7 padding defined by RSA (the company)
-
-// The padding algorithm is outlined in section 10.3 of RFC2315
-// https://datatracker.ietf.org/doc/html/rfc2315#section-10.3
+// see: https://datatracker.ietf.org/doc/html/rfc2315#section-10.3
 
 // For algorithms that assume input length is a multiple of k bytes, where k > 1,
 // define a method for handling inputs whose length != 0 mod k. For such algorithms,
@@ -38,7 +36,7 @@ impl<N: ArrayLength<u8>> Padder<N> for Pkcs7 {
             block_size - remainder
         };
 
-        byte_stream.resize(byte_stream.len() + padding, padding as u8);
+        byte_stream.resize(byte_stream.len() + padding, padding as u8); // TODO: constrain max block size is 256
         byte_stream
             .chunks_exact(block_size)
             .map(|chunk| {

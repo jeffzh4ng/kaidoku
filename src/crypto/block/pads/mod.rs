@@ -2,7 +2,6 @@ use super::Block;
 use generic_array::ArrayLength;
 
 pub mod ansix923;
-pub mod iso10126;
 pub mod iso7816;
 pub mod pkcs7;
 

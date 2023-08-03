@@ -6,6 +6,7 @@ use clap::{Parser, Subcommand};
 
 // TODOs
 // - remove clones made to satisfy borrow checker
+// - rename plaintext and ciphertext to single word
 // - generic array
 // - cli: files, stdin
 // - cd: lints, benchmarks, msrv, tests

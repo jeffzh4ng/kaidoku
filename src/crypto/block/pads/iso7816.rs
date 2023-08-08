@@ -6,8 +6,8 @@ use super::Padder;
 struct Iso7816 {}
 
 impl<N: ArrayLength<u8>> Padder<N> for Iso7816 {
-    fn pad(&self, plain_text: Vec<u8>) -> Vec<Block<N>> {
-        let mut byte_stream = plain_text;
+    fn pad(&self, plaintext: Vec<u8>) -> Vec<Block<N>> {
+        let mut byte_stream = plaintext;
         let block_size = N::to_usize();
         let remainder = byte_stream.len() % block_size;
 
@@ -29,8 +29,8 @@ impl<N: ArrayLength<u8>> Padder<N> for Iso7816 {
             .collect()
     }
 
-    fn unpad(&self, cipher_text: Vec<Block<N>>) -> Vec<u8> {
-        let byte_stream = cipher_text
+    fn unpad(&self, ciphertext: Vec<Block<N>>) -> Vec<u8> {
+        let byte_stream = ciphertext
             .into_iter()
             .flat_map(|b| b.as_slice())
             .take_while(|&byte| *byte == 0x00)

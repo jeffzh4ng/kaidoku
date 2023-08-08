@@ -38,15 +38,15 @@ pub fn score(s: &str) -> i32 {
 }
 
 pub fn monoalphabetic_attack(
-    cipher_text_hex: &str,
+    ciphertext_hex: &str,
 ) -> Result<Option<(u8, String)>, VernamAttackError> {
-    let cipher_text = encode::hex::HexToByteDecoder::new(cipher_text_hex.chars())
+    let ciphertext = encode::hex::HexToByteDecoder::new(ciphertext_hex.chars())
         .collect::<Result<Vec<u8>, encode::hex::HexEncodingError>>()?;
 
     // ciphertext: 1111 0000
     // keyspace:   0000 0001
     // plaintext:  1111 0001
-    let mut plain_text_scores: HashMap<(u8, String), i32> = HashMap::new();
+    let mut plaintext_scores: HashMap<(u8, String), i32> = HashMap::new();
 
     // brute force through the key space
     let key_space = (0..=255).collect::<Vec<u8>>();
@@ -56,51 +56,51 @@ pub fn monoalphabetic_attack(
         // p = plain text
         // c = cipher text
         // k = key
-        let c = cipher_text.clone().into_iter();
-        let k_stretched = std::iter::repeat(k).take(cipher_text.len());
+        let c = ciphertext.clone().into_iter();
+        let k_stretched = std::iter::repeat(k).take(ciphertext.len());
 
         let plain_bytes = crypto::stream::VernamCipher::new(c, k_stretched.clone())
             .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()?;
 
         // convert bytes to string, calculate the score, and store it in the map
-        let plain_text = String::from_utf8(plain_bytes);
+        let plaintext = String::from_utf8(plain_bytes);
 
         // check if plain bytes are invalid utf8
-        if plain_text.is_err() {
+        if plaintext.is_err() {
             continue;
         }
 
         // convert bytes to string, calculate the score, and store it in the map
-        let plain_text = plain_text.unwrap();
+        let plaintext = plaintext.unwrap();
 
-        let score = score(&plain_text);
-        plain_text_scores.insert((k, plain_text), score);
+        let score = score(&plaintext);
+        plaintext_scores.insert((k, plaintext), score);
     }
 
     // sort the map by score
-    let mut plain_text_scores_tuples = plain_text_scores
+    let mut plaintext_score_tuples = plaintext_scores
         .into_iter()
         .collect::<Vec<((u8, String), i32)>>();
-    plain_text_scores_tuples.sort_by(|a, b| b.1.cmp(&a.1));
+    plaintext_score_tuples.sort_by(|a, b| b.1.cmp(&a.1));
 
-    if plain_text_scores_tuples.is_empty() {
+    if plaintext_score_tuples.is_empty() {
         return Ok(None);
     }
 
     // if there's a tie, warn
-    if plain_text_scores_tuples[0].1 == plain_text_scores_tuples[1].1 {
+    if plaintext_score_tuples[0].1 == plaintext_score_tuples[1].1 {
         println!("warning: there's a tie");
-        println!("one: {:?}", &plain_text_scores_tuples[0].0);
-        println!("two: {:?}", &plain_text_scores_tuples[1].0);
+        println!("one: {:?}", &plaintext_score_tuples[0].0);
+        println!("two: {:?}", &plaintext_score_tuples[1].0);
     }
 
-    if !&plain_text_scores_tuples[0].0 .1.as_bytes().is_ascii() {
+    if !&plaintext_score_tuples[0].0 .1.as_bytes().is_ascii() {
         return Err(VernamAttackError::PlainTextAsciiError);
     }
 
     // select the plain text with the highest score
-    let key_plain_text_tuple = &plain_text_scores_tuples[0].0;
-    Ok(Some(key_plain_text_tuple.clone()))
+    let key_plaintext_tuple = &plaintext_score_tuples[0].0;
+    Ok(Some(key_plaintext_tuple.clone()))
 }
 
 pub fn monoalphabetic_attack_file_variation(
@@ -110,11 +110,11 @@ pub fn monoalphabetic_attack_file_variation(
     let file = fs::File::open(path)?;
 
     let reader = io::BufReader::new(file);
-    let plain_text_with_high_score = reader
+    let plaintext_with_highscore = reader
         .lines()
         .collect::<Result<Vec<String>, io::Error>>()?
         .into_iter()
-        .map(|cipher_text| monoalphabetic_attack(&cipher_text))
+        .map(|ciphertext| monoalphabetic_attack(&ciphertext))
         .filter_map(Result::ok)
         .fold((0, String::new()), |(high_score, x), score_option| {
             if let Some((_k, y)) = score_option {
@@ -126,7 +126,7 @@ pub fn monoalphabetic_attack_file_variation(
             (high_score, x)
         });
 
-    Ok(plain_text_with_high_score.1)
+    Ok(plaintext_with_highscore.1)
 }
 
 #[derive(Eq, PartialEq)]
@@ -146,23 +146,23 @@ impl PartialOrd for SizeDistancePair {
 
 pub fn polyalphabetic_attack(path_location: &str) -> String {
     // employing hamming distance variation of the kasiski attack
-    let cipher_text_bytes = parse_and_decode_file(path_location);
-    let probable_key_size = find_probable_key_size(&cipher_text_bytes);
-    let probable_key = find_probable_key(&cipher_text_bytes, probable_key_size);
+    let ciphertext_bytes = parse_and_decode_file(path_location);
+    let probable_key_size = find_probable_key_size(&ciphertext_bytes);
+    let probable_key = find_probable_key(&ciphertext_bytes, probable_key_size);
 
     // TODO: make decrypt function for plain bytes
     let probable_key_stretched = probable_key
         .into_iter()
         .cycle()
-        .take(cipher_text_bytes.len());
+        .take(ciphertext_bytes.len());
 
     let plain_bytes =
-        crypto::stream::VernamCipher::new(cipher_text_bytes.into_iter(), probable_key_stretched)
+        crypto::stream::VernamCipher::new(ciphertext_bytes.into_iter(), probable_key_stretched)
             .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()
             .unwrap();
-    let plain_text = String::from_utf8(plain_bytes).unwrap();
+    let plaintext = String::from_utf8(plain_bytes).unwrap();
 
-    plain_text
+    plaintext
 }
 
 fn parse_and_decode_file(path_location: &str) -> Vec<u8> {
@@ -174,28 +174,24 @@ fn parse_and_decode_file(path_location: &str) -> Vec<u8> {
         .collect::<Vec<String>>()
         .join("");
 
-    let cipher_text_bytes = encode::base64::Base64ToByteDecoder::new(contents.chars())
+    let ciphertext_bytes = encode::base64::Base64ToByteDecoder::new(contents.chars())
         .collect::<Result<Vec<u8>, encode::base64::Base64Error>>()
         .unwrap();
 
-    cipher_text_bytes
+    ciphertext_bytes
 }
 
-fn find_probable_key_size(cipher_text_bytes: &[u8]) -> i32 {
+fn find_probable_key_size(ciphertext_bytes: &[u8]) -> i32 {
     let mut min_hamming_distances = collections::BinaryHeap::new();
-    // println!("c: {:?}", cipher_text_bytes);
+    // println!("c: {:?}", ciphertext_bytes);
     for key_size in 2..40 {
         // assuming Alice and Bob aren't aware of Shannon's perfect secrecy
         // ==> key length < 40
         let chunks = [
-            cipher_text_bytes[0..key_size].iter().copied(),
-            cipher_text_bytes[key_size..key_size * 2].iter().copied(),
-            cipher_text_bytes[key_size * 2..key_size * 3]
-                .iter()
-                .copied(),
-            cipher_text_bytes[key_size * 3..key_size * 4]
-                .iter()
-                .copied(),
+            ciphertext_bytes[0..key_size].iter().copied(),
+            ciphertext_bytes[key_size..key_size * 2].iter().copied(),
+            ciphertext_bytes[key_size * 2..key_size * 3].iter().copied(),
+            ciphertext_bytes[key_size * 3..key_size * 4].iter().copied(),
         ];
         let mut sum = 0;
         for i in 0..chunks.len() {
@@ -224,9 +220,9 @@ fn find_probable_key_size(cipher_text_bytes: &[u8]) -> i32 {
     probable_key_size
 }
 
-fn find_probable_key(cipher_text_bytes: &[u8], probable_key_size: i32) -> Vec<u8> {
+fn find_probable_key(ciphertext_bytes: &[u8], probable_key_size: i32) -> Vec<u8> {
     // chunk the ciphertext into blocks with the same size as the probable key
-    let chunks: Vec<Vec<u8>> = cipher_text_bytes
+    let chunks: Vec<Vec<u8>> = ciphertext_bytes
         .chunks(probable_key_size as usize)
         .map(|chunk| chunk.to_vec())
         .collect();
@@ -258,8 +254,8 @@ fn find_probable_key(cipher_text_bytes: &[u8], probable_key_size: i32) -> Vec<u8
                 .collect::<Result<String, encode::hex::HexEncodingError>>()
                 .unwrap();
 
-            let key_plain_text_tuple = monoalphabetic_attack(&hex_encoded_bytes);
-            key_plain_text_tuple.unwrap().unwrap().0
+            let key_plaintext_tuple = monoalphabetic_attack(&hex_encoded_bytes);
+            key_plaintext_tuple.unwrap().unwrap().0
         })
         .collect();
 

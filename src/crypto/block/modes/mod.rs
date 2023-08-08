@@ -37,6 +37,3 @@ where
     fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<Block<N>>;
     fn decrypt(&mut self, ciphertext: Vec<Block<N>>) -> Vec<u8>;
 }
-
-trait ParallelizableBlockMode {}
-trait RandomReadableBlockMode {}

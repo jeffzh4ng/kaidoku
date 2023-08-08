@@ -59,11 +59,11 @@ where
         ciphertext_blocks
     }
 
-    fn decrypt(&mut self, cipher_text: Vec<Block<N>>) -> Vec<u8> {
+    fn decrypt(&mut self, ciphertext: Vec<Block<N>>) -> Vec<u8> {
         let mut prev_ciphertext = GenericArray::default();
         prev_ciphertext.copy_from_slice(&self.iv);
 
-        let plaintext_blocks = cipher_text
+        let plaintext_blocks = ciphertext
             .into_iter()
             .map(|b| {
                 let diffused_plaintext_block = self.cipher.decrypt_block(b);

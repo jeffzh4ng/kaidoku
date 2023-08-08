@@ -9,20 +9,20 @@ pub enum VernamCipherError {
 }
 
 pub fn vernam_cipher_with_key<'a>(
-    plain_text: &'a str,
+    plaintext: &'a str,
     key: &'a str,
 ) -> Box<dyn Iterator<Item = Result<u8, VernamCipherError>> + 'a> {
-    let plain_text_bytes = plain_text
+    let plaintext_bytes = plaintext
         .chars()
         .flat_map(crate::encode::utils::char_to_bytes);
 
     let repeating_key_bytes = key
         .chars()
         .cycle()
-        .take(plain_text.len())
+        .take(plaintext.len())
         .flat_map(crate::encode::utils::char_to_bytes);
 
-    let xor_cipher = VernamCipher::new(plain_text_bytes, repeating_key_bytes);
+    let xor_cipher = VernamCipher::new(plaintext_bytes, repeating_key_bytes);
     Box::new(xor_cipher)
 }
 

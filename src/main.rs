@@ -5,12 +5,11 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 // TODOs
-// - remove clones made to satisfy borrow checker
-// - rename plaintext and ciphertext to single word
-// - generic array
 // - cli: files, stdin
 // - cd: lints, benchmarks, msrv, tests
 // - offer macros
+// - block mode traits (parallelizable, random read)
+// - look into encode iterators taking shared views rather than owned
 
 /// commandline cryptographic protocols
 #[derive(Parser)]
@@ -87,11 +86,11 @@ fn main() -> Result<()> {
             output,
         }) => {
             println!("encrypt");
-            let plain_text =
+            let plaintext =
                 "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
             let key = "ICE";
 
-            let cipher_text = fuin::crypto::stream::vernam_cipher_with_key(plain_text, key)
+            let ciphertext = fuin::crypto::stream::vernam_cipher_with_key(plaintext, key)
                 .collect::<Result<Vec<u8>, fuin::crypto::stream::VernamCipherError>>()
                 .context("unable to encrypt plaintext")?;
             // .unwrap()
@@ -135,14 +134,14 @@ fn test_runner() {
     // decrypting the ciphertext with the single shift, and then scoring the plaintext based on freq analysis
 
     // challenge 3: monoalphabetic vernam attack
-    let cipher_text = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-    let plain_text = fuin::attack::vernam::monoalphabetic_attack(cipher_text);
-    println!("single byte XOR attack: {}", plain_text.unwrap().unwrap().1);
+    let ciphertext = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
+    let plaintext = fuin::attack::vernam::monoalphabetic_attack(ciphertext);
+    println!("single byte XOR attack: {}", plaintext.unwrap().unwrap().1);
 
     // challenge 4: monoalphabetic vernam attack (file variation)
     let path = "/Users/jeff/Documents/repos/fuin/tests/data/monoalphabetic_vernam_ciphertext.txt";
-    let plain_text = fuin::attack::vernam::monoalphabetic_attack_file_variation(path);
-    println!("single byte XOR from file attack: {}", plain_text.unwrap());
+    let plaintext = fuin::attack::vernam::monoalphabetic_attack_file_variation(path);
+    println!("single byte XOR from file attack: {}", plaintext.unwrap());
 
     // -------------polyalphabetic "polyshift" ciphers--------------------------
     // the cipher is attacked by kasiski examination variation
@@ -156,22 +155,22 @@ fn test_runner() {
     // yes, brute force through keyspace aka shiftspace, and use freq analysis
 
     // challenge 5: polyalphabetic vernam
-    let plain_text = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
+    let plaintext = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
     let key = "ICE";
 
-    let cipher_text = fuin::crypto::stream::vernam_cipher_with_key(plain_text, key)
+    let ciphertext = fuin::crypto::stream::vernam_cipher_with_key(plaintext, key)
         .collect::<Result<Vec<u8>, fuin::crypto::stream::VernamCipherError>>()
         .unwrap()
         .into_iter();
-    let cipher_text_hex = fuin::encode::hex::ByteToHexEncoder::new(cipher_text) // TODO: look into iterators over references
+    let ciphertext_hex = fuin::encode::hex::ByteToHexEncoder::new(ciphertext) // TODO: look into iterators over references
         .collect::<Result<String, fuin::encode::hex::HexEncodingError>>()
         .unwrap();
-    println!("cipher_text_hex: {}", cipher_text_hex);
+    println!("ciphertext_hex: {}", ciphertext_hex);
 
     // challenge 6: polyalphabetic vernam attack
     let path = "/Users/jeff/Documents/repos/fuin/tests/data/polyalphabetic_vernam_ciphertext.txt";
-    let plain_text = fuin::attack::vernam::polyalphabetic_attack(path);
-    println!("polyalphabetic vernam attack: {}", plain_text);
+    let plaintext = fuin::attack::vernam::polyalphabetic_attack(path);
+    println!("polyalphabetic vernam attack: {}", plaintext);
 
     // joseph mauborgne recognized if the key was "endless and senseless",
     // aka key length = plaintext length and it's truly *random*,

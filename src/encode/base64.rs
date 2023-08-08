@@ -30,12 +30,24 @@
 //! assert_eq!(decoded, b"Hello, World!");
 //! ```
 
-use std::io;
-
 use alloc::vec;
+use thiserror::Error;
 
 const B64_MAP: &[u8] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".as_bytes();
+
+#[non_exhaustive]
+#[derive(Debug, Error)]
+pub enum Base64Error {
+    #[error("plain text with highest score is invalid ASCII")]
+    AsciiError,
+
+    #[error("encoding contains invalid base64 char")]
+    Base64Error,
+
+    #[error("Invalid padding")]
+    InvalidPaddingError,
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum DecodedByte {
@@ -73,7 +85,7 @@ impl<I> Iterator for Base64ToByteDecoder<I>
 where
     I: Iterator<Item = char>,
 {
-    type Item = Result<u8, io::Error>;
+    type Item = Result<u8, Base64Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(DecodedByte::Value(byte)) = self.output.iter_mut().find_map(|b| b.take()) {
@@ -88,10 +100,7 @@ where
         for i in 0..4 {
             if let Some(c) = self.input.next() {
                 if !c.is_ascii() {
-                    return Some(Err(io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        "Input is not ascii",
-                    )));
+                    return Some(Err(Base64Error::AsciiError));
                 }
 
                 if c == '=' {
@@ -111,10 +120,7 @@ where
         }
 
         if padding_count > 2 {
-            return Some(Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Invalid padding.",
-            )));
+            return Some(Err(Base64Error::InvalidPaddingError));
         }
 
         // convert four base64 chars into three bytes
@@ -126,10 +132,7 @@ where
         self.output = [Some(three_bytes[1]), Some(three_bytes[2])];
         match three_bytes[0] {
             DecodedByte::Value(byte) => Some(Ok(byte)),
-            DecodedByte::Padding => Some(Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Invalid padding.",
-            ))),
+            DecodedByte::Padding => Some(Err(Base64Error::InvalidPaddingError)),
         }
     }
 }
@@ -154,7 +157,7 @@ where
         &self,
         four_b64s: Vec<u8>,
         padding_count: i32,
-    ) -> Result<[DecodedByte; 3], io::Error> {
+    ) -> Result<[DecodedByte; 3], Base64Error> {
         let mut four_bytes = vec![];
         for i in 0..4 - padding_count {
             let b = if four_b64s[i as usize] == b'=' {
@@ -163,10 +166,7 @@ where
                 let position = B64_MAP
                     .iter()
                     .position(|&b64_char| b64_char == four_b64s[i as usize])
-                    .ok_or(io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        "Invalid b64 char.",
-                    ))?;
+                    .ok_or(Base64Error::Base64Error)?;
 
                 position as u8 // this can't fail due to B64_MAP length being 64
             };
@@ -306,15 +306,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::io;
-
     use crate::encode::{base64, hex};
 
     #[test]
     fn base64_decoder_invalid_ascii() {
         let input = "こんにちは";
         assert!(base64::Base64ToByteDecoder::new(input.chars())
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, base64::Base64Error>>()
             .is_err());
     }
 
@@ -323,7 +321,7 @@ mod tests {
         let input = "";
         let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
         let actual_output = base64_decoder
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, base64::Base64Error>>()
             .unwrap();
         let expected_output: Vec<u8> = vec![];
 
@@ -334,7 +332,7 @@ mod tests {
     fn base64_decoder_one_char_without_padding() {
         let input = "b";
         let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
-        let actual_output = base64_decoder.collect::<Result<Vec<u8>, io::Error>>();
+        let actual_output = base64_decoder.collect::<Result<Vec<u8>, base64::Base64Error>>();
 
         assert!(actual_output.is_err());
     }
@@ -343,7 +341,7 @@ mod tests {
     fn base64_decoder_one_char_with_padding() {
         let input = "b===";
         let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
-        let actual_output = base64_decoder.collect::<Result<Vec<u8>, io::Error>>();
+        let actual_output = base64_decoder.collect::<Result<Vec<u8>, base64::Base64Error>>();
 
         assert!(actual_output.is_err());
     }
@@ -365,7 +363,7 @@ mod tests {
         let input = "bQ==";
         let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
         let actual_output = base64_decoder
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, base64::Base64Error>>()
             .unwrap();
         let expected_output: Vec<u8> = vec![0x6d];
 
@@ -377,7 +375,7 @@ mod tests {
         let input = "bQ";
         let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
         let actual_output = base64_decoder
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, base64::Base64Error>>()
             .unwrap();
         let expected_output: Vec<u8> = vec![0x6d];
 
@@ -389,7 +387,7 @@ mod tests {
         let input = "b20=";
         let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
         let actual_output = base64_decoder
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, base64::Base64Error>>()
             .unwrap();
         let expected_output: Vec<u8> = vec![0x6f, 0x6d];
 
@@ -401,7 +399,7 @@ mod tests {
         let input = "b20";
         let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
         let actual_output = base64_decoder
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, base64::Base64Error>>()
             .unwrap();
         let expected_output: Vec<u8> = vec![0x6f, 0x6d];
 
@@ -413,7 +411,7 @@ mod tests {
         let input = "b29t";
         let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
         let actual_output = base64_decoder
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, base64::Base64Error>>()
             .unwrap();
         let expected_output: Vec<u8> = vec![0x6f, 0x6f, 0x6d];
 
@@ -425,7 +423,7 @@ mod tests {
         let input = "b29t";
         let base64_decoder = base64::Base64ToByteDecoder::new(input.chars());
         let actual_output = base64_decoder
-            .collect::<Result<Vec<u8>, io::Error>>()
+            .collect::<Result<Vec<u8>, base64::Base64Error>>()
             .unwrap();
         let expected_output: Vec<u8> = vec![0x6f, 0x6f, 0x6d];
 

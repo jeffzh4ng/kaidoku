@@ -10,6 +10,7 @@ use clap::{Parser, Subcommand};
 // - generic array
 // - cli: files, stdin
 // - cd: lints, benchmarks, msrv, tests
+// - offer macros
 
 /// commandline cryptographic protocols
 #[derive(Parser)]

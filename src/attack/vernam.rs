@@ -21,6 +21,9 @@ pub enum VernamAttackError {
 
     #[error(transparent)]
     VernamError(#[from] crypto::stream::VernamCipherError),
+
+    #[error(transparent)]
+    IoError(#[from] io::Error),
 }
 
 const ENGLISH_FREQ: &str = "QZXJKVBWPYGMCFULDRHS NIOTAE";
@@ -100,7 +103,9 @@ pub fn monoalphabetic_attack(
     Ok(Some(key_plain_text_tuple.clone()))
 }
 
-pub fn monoalphabetic_attack_file_variation(path_location: &str) -> Result<String, io::Error> {
+pub fn monoalphabetic_attack_file_variation(
+    path_location: &str,
+) -> Result<String, VernamAttackError> {
     let path = Path::new(path_location);
     let file = fs::File::open(path)?;
 
@@ -170,7 +175,7 @@ fn parse_and_decode_file(path_location: &str) -> Vec<u8> {
         .join("");
 
     let cipher_text_bytes = encode::base64::Base64ToByteDecoder::new(contents.chars())
-        .collect::<Result<Vec<u8>, io::Error>>()
+        .collect::<Result<Vec<u8>, encode::base64::Base64Error>>()
         .unwrap();
 
     cipher_text_bytes

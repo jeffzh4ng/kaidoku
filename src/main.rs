@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 // TODOs
+// - remove verbose package qualifiers
 // - cli: files, stdin
 // - cd: lints, benchmarks, msrv, tests
 // - offer macros

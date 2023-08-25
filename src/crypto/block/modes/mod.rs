@@ -2,8 +2,8 @@ use super::ciphers::BlockCipher;
 use super::pads::Padder;
 use super::Block;
 
-pub mod cbc;
-pub mod ecb;
+// pub mod cbc;
+// pub mod ecb;
 
 /// `BlockMode` is a trait representing a mode of operation for block ciphers.
 ///

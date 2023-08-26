@@ -179,19 +179,45 @@ impl Aes {
         output
     }
 
-    // shifting aka *rotation*
-    fn shift_rows(&self, input: Block<typenum::U128>) -> Block<typenum::U128> {
+    // The ShiftRows step operates on the rows of the state; it cyclically shifts
+    // the bytes in each row by a certain offset. For AES, the first row is left
+    // unchanged. Each byte of the second row is shifted one to the left.
+    // Similarly, the third and fourth rows are shifted by offsets of two and
+    // three respectively.
+
+    // In this way, each column of the output state of the ShiftRows step is
+    // composed of bytes from each column of the input state. The importance of
+    // this step is to avoid the columns being encrypted independently, in which
+    // case AES would degenerate into four independent block ciphers.
+
+    // see more: https://en.wikipedia.org/wiki/Rijndael_S-box
+    fn shift_rows(&self, input: Block<typenum::U16>) -> Block<typenum::U16> {
         let mut output = input.clone();
 
-        // row 2 << 1
-        let temp = output[4];
-        output[4] = output[5];
-        output[5] = output[6];
-        output[6] = output[7];
-        output[7] = temp;
+        // memory
+        // 0  1  2  3
+        // 4  5  6  7
+        // 8  9  10 11
+        // 12 13 14 15
 
-        // row 3 << 2
-        let (temp_one, temp_two) = (output[8], output[9]);
+        // logical
+        // 0  4  8  12
+        // 1  5  9  13
+        // 2  6 10  14
+        // 3  7 11  15
+
+        // multiplying by 5 allows us to
+        // 1. skip over rows (memory) i.e., 4*5%16= 20%16=4. 5*5%16= 25&16=9
+        // 2. rotate based on column (memory)
+        for i in 0..input.len() {
+            output[i] = input[(i * 5) % 16];
+        }
+
+        output
+    }
+
+        output
+    }
 
         output[8] = output[10];
         output[9] = output[11];

@@ -1,4 +1,5 @@
 use generic_array::typenum;
+use generic_array::GenericArray;
 
 use crate::crypto::stream::VernamCipher;
 use crate::crypto::stream::VernamCipherError;
@@ -12,12 +13,47 @@ enum KeyLength {
     Length256,
 }
 
+// AES is based on a design principle known as a substitution–permutation network,
+// and is efficient in both software and hardware. Unlike its predecessor DES,
+// AES does not use a Feistel network. AES is a variant of Rijndael, with a fixed
+// block size of 128 bits, and a key size of 128, 192, or 256 bits.
+
+// By contrast, Rijndael per se is specified with block and key sizes that may be
+// any multiple of 32 bits, with a minimum of 128 and a maximum of 256 bits. Most
+// AES calculations are done in a particular finite field.
+
+// AES operates on a 4 × 4 column-major order array of 16 bytes b0, b1, ..., b15
+// termed the state.
+
+// =============================================================================
+// High-level description of the algorithm
+// =============================================================================
+// 1. KeyExpansion – round keys are derived from the cipher key using the AES key
+// schedule. AES requires a separate 128-bit round key block for each round plus one more.
+
+// 2. Initial round key addition:
+// AddRoundKey – each byte of the state is combined with a byte of the round key
+//               using bitwise xor.
+
+// 3. Rounds (9, 11 or 13)
+// ---1. SubBytes – a non-linear substitution step where each byte is replaced
+//                  with another according to a lookup table.
+// ---2. ShiftRows – a transposition step where the last three rows of the state
+//                   are shifted cyclically a certain number of steps.
+// ---3. MixColumns – a linear mixing operation which operates on the columns of
+//                    the state, combining the four bytes in each column.
+// ---4. AddRoundKey
+
+// 4. Final round (making 10, 12 or 14 rounds in total):
+// ---1. SubBytes
+// ---2. ShiftRows
+// ---3. AddRoundKey
 struct Aes {
     key: Vec<u8>,
     key_length: KeyLength,
 }
 
-impl BlockCipher<typenum::U128> for Aes {
+impl BlockCipher<typenum::U16> for Aes {
     fn new(key: Vec<u8>) -> Self {
         let key_length = match key.len() {
             16 => KeyLength::Length128,
@@ -32,26 +68,29 @@ impl BlockCipher<typenum::U128> for Aes {
         Aes { key, key_length }
     }
 
-    fn encrypt_block(&self, block: Block<typenum::U128>) -> Block<typenum::U128> {
-        let mut encrypted_block = block;
-
+    fn encrypt_block(&self, block: Block<typenum::U16>) -> Block<typenum::U16> {
+        // 1. key expansion
         let rounds = match self.key_length {
             KeyLength::Length128 => 10,
             KeyLength::Length192 => 12,
             KeyLength::Length256 => 14,
         };
+        let round_keys = self.key_expansion(&self.key, rounds);
 
-        let round_keys = self.key_expansion(&self.key);
+        // 2. initial round key addition
+        let mut encrypted_block = block;
         encrypted_block = self.add_round_key(encrypted_block, round_keys[0]);
 
-        // final round (no mix cols) comes after looping
+        // 3. 9, 11, or 13 rounds
         for round in 0..rounds - 1 {
             encrypted_block = self.sub_bytes(encrypted_block);
             encrypted_block = self.shift_rows(encrypted_block);
             encrypted_block = self.mix_cols(encrypted_block);
-            encrypted_block = self.add_round_key(encrypted_block, round_keys[round]);
+            // using round + 1 as index since the 0th roudn key was used to XOR the plaintext
+            encrypted_block = self.add_round_key(encrypted_block, round_keys[round + 1]);
         }
 
+        // 4. final round (making 10, 12, or 14 rounds total)
         encrypted_block = self.sub_bytes(encrypted_block);
         encrypted_block = self.shift_rows(encrypted_block);
         encrypted_block = self.add_round_key(encrypted_block, round_keys[10]);
@@ -59,35 +98,79 @@ impl BlockCipher<typenum::U128> for Aes {
         encrypted_block
     }
 
-    fn decrypt_block(&self, block: Block<typenum::U128>) -> Block<typenum::U128> {
+    fn decrypt_block(&self, block: Block<typenum::U16>) -> Block<typenum::U16> {
         todo!()
     }
 }
 
 impl Aes {
-    fn key_expansion(&self, key: &Vec<u8>) -> Vec<Block<typenum::U128>> {
+    // AES uses a key schedule to expand a short key into a number of separate
+    // round keys. The three AES variants have a different number of rounds.
+    // Each variant requires a separate 128-bit round key for each round plus one
+    // more. The key schedule produces the needed round keys from the initial key.
+
+    // see more: https://en.wikipedia.org/wiki/AES_key_schedule
+    fn key_expansion(&self, key: &Vec<u8>, rounds: usize) -> Vec<Block<typenum::U16>> {
+        // let mut round_keys = Vec::new();
+
+        // let key_words = self.key_words(key);
+
+        // for i in 0..rounds + 1 {
+        //     // rounds + 1 keys required
+        //     round_keys.push(GenericArray::from_slice(&[0u8; 16]));
+        // }
+
+        // 1. rotword
+
+        // 2. subword
+
+        // 3. rcon
+
         todo!()
     }
 
-    // TODO: are round keys always 128 bits?
+    fn key_words(&self, key: &Vec<u8>) -> [u32; 4] {
+        [
+            u32::from_be_bytes([key[0x0], key[0x1], key[0x2], key[0x3]]),
+            u32::from_be_bytes([key[0x4], key[0x5], key[0x6], key[0x7]]),
+            u32::from_be_bytes([key[0x8], key[0x9], key[0xa], key[0xb]]),
+            u32::from_be_bytes([key[0xc], key[0xd], key[0xe], key[0xf]]),
+        ]
+    }
+
     fn add_round_key(
         &self,
-        input: Block<typenum::U128>,
-        key: Block<typenum::U128>,
-    ) -> Block<typenum::U128> {
+        input: Block<typenum::U16>,
+        key: Block<typenum::U16>,
+    ) -> Block<typenum::U16> {
         let a = input.into_iter();
         let b = key.into_iter();
         let xor_cipher = VernamCipher::new(a, b);
 
         let output = xor_cipher
             .collect::<Result<Vec<u8>, VernamCipherError>>()
-            .unwrap(); // SAFETY: VermamCipherError only contains unequal input length, which can't happen since both input and key are typed with typenum::U128
+            .unwrap(); // SAFETY: VermamCipherError only contains unequal input length, which can't happen since both input and key are typed with typenum::U16
 
         output.into_iter().collect()
     }
 
-    fn sub_bytes(&self, input: Block<typenum::U128>) -> Block<typenum::U128> {
-        let mut output = input.clone();
+    // In the SubBytes step, each byte, a_{i,j} in the state array is replaced with
+    // a SubByte S(a_{i,j}) using an 8-bit substitution box. Note that before round
+    // 0, the state array is simply the plaintext/input.
+
+    // ***This operation provides the non-linearity in the cipher.***
+
+    // The S-box used is derived from the multiplicative inverse over GF(2^8), known
+    // to have good non-linearity properties. To avoid attacks based on simple
+    // algebraic properties, the S-box is constructed by combining
+    // 1. the inverse function
+    // 2. invertible affine transformation
+
+    // The S-box is also chosen to avoid any fixed points (and so is a derangement),
+    // i.e., S(a_{i,j}) != a_{i,j}
+    // and also any opposite fixed points, i.e. S(a_{i,j}) XOR a_{i,j} != FF_{16}
+    fn sub_bytes(&self, input: Block<typenum::U16>) -> Block<typenum::U16> {
+        let mut output = input;
 
         for i in 0..input.len() {
             output[i] = SBOX[input[i] as usize];
@@ -133,6 +216,7 @@ impl Aes {
     }
 }
 
+// The S-box maps an 8-bit input, c, to an 8-bit output, s = S(c). Both the input and output are interpreted as polynomials over GF(2). First, the input is mapped to its multiplicative inverse in GF(2^8) = GF(2) [x]/(x8 + x4 + x3 + x + 1), Rijndael's finite field. Zero, as the identity, is mapped to itself. This transformation is known as the Nyberg S-box after its inventor Kaisa Nyberg. The multiplicative inverse is then transformed using the following affine transformation:
 const SBOX: [u8; 256] = [
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -152,12 +236,29 @@ const SBOX: [u8; 256] = [
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 ];
 
+const fn gf_mult() {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn foo() {
-        assert_eq!(1, 1);
+    fn test_sub_bytes() {
+        let aes = Aes {
+            key: Vec::new(),
+            key_length: KeyLength::Length128,
+        };
+
+        let plaintext = *b"The quick brown ";
+        let plaintext_block = generic_array::GenericArray::clone_from_slice(&plaintext);
+
+        let plaintext_subbed_block = aes.sub_bytes(plaintext_block);
+        let actual_output = plaintext_subbed_block.as_slice();
+        let expected_output: [u8; 16] = [
+            0x20, 0x45, 0x4d, 0xb7, 0xa3, 0x9d, 0xf9, 0xfb, 0x7f, 0xb7, 0xaa, 0x40, 0xa8, 0xf5,
+            0x9f, 0xb7,
+        ];
+
+        assert_eq!(actual_output, expected_output);
     }
 }

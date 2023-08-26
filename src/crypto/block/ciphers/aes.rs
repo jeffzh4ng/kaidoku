@@ -52,7 +52,7 @@ enum KeyLength {
 // Algorithm security
 // =============================================================================
 
-// According to NSA...
+// According to NSA,
 // The design and strength of all key lengths of the AES algorithm (i.e., 128, 192 and 256)
 // are sufficient to protect classified information up to the SECRET level.
 // TOP SECRET information will require use of either the 192 or 256 key lengths.
@@ -124,6 +124,9 @@ impl Aes {
     // round keys. The three AES variants have a different number of rounds.
     // Each variant requires a separate 128-bit round key for each round plus one
     // more. The key schedule produces the needed round keys from the initial key.
+    // Using different keys for each round protects against slide attacks[0]
+
+    // [0]: https://en.wikipedia.org/wiki/Slide_attack
 
     // see more: https://en.wikipedia.org/wiki/AES_key_schedule
     fn key_expansion(&self, key: &Vec<u8>, rounds: usize) -> Vec<Block<typenum::U16>> {
@@ -154,6 +157,9 @@ impl Aes {
         ]
     }
 
+    // The AddRoundKey step combines a round key with the state with the XOR operation.
+    // For each round, a round key is derived from the main key using Rijndael's
+    // key schedule; each round key is the same size as the state.
     fn add_round_key(
         &self,
         input: Block<typenum::U16>,
@@ -185,6 +191,8 @@ impl Aes {
     // The S-box is also chosen to avoid any fixed points (and so is a derangement),
     // i.e., S(a_{i,j}) != a_{i,j}
     // and also any opposite fixed points, i.e. S(a_{i,j}) XOR a_{i,j} != FF_{16}
+
+    // see more: https://en.wikipedia.org/wiki/Rijndael_S-box
     fn sub_bytes(&self, input: Block<typenum::U16>) -> Block<typenum::U16> {
         let mut output = input;
 
@@ -206,7 +214,6 @@ impl Aes {
     // this step is to avoid the columns being encrypted independently, in which
     // case AES would degenerate into four independent block ciphers.
 
-    // see more: https://en.wikipedia.org/wiki/Rijndael_S-box
     fn shift_rows(&self, input: Block<typenum::U16>) -> Block<typenum::U16> {
         let mut output = input.clone();
 
@@ -359,6 +366,30 @@ const SBOX: [u8; 256] = [
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_add_round_key() {
+        let state = [
+            0xe1, 0x53, 0x30, 0x22, 0xb7, 0xdb, 0xf3, 0xa3, 0x4c, 0xa2, 0x06, 0xd4, 0x3d, 0x72,
+            0xc4, 0xdf,
+        ];
+        let state_input = generic_array::GenericArray::clone_from_slice(&state);
+        let key = *b"abcdefghijklmnop";
+        let key_input = generic_array::GenericArray::clone_from_slice(&key);
+
+        let aes = Aes {
+            key: Vec::new(),
+            key_length: KeyLength::Length128,
+        };
+
+        let actual_output = aes.add_round_key(state_input, key_input);
+        let expected_output = [
+            0x80, 0x31, 0x53, 0x46, 0xd2, 0xbd, 0x94, 0xcb, 0x25, 0xc8, 0x6d, 0xb8, 0x50, 0x1c,
+            0xab, 0xaf,
+        ];
+
+        assert_eq!(actual_output.as_slice(), expected_output);
+    }
 
     #[test]
     fn test_sub_bytes() {

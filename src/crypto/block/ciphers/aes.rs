@@ -1,5 +1,4 @@
 use generic_array::typenum;
-use generic_array::GenericArray;
 
 use crate::crypto::stream::VernamCipher;
 use crate::crypto::stream::VernamCipherError;
@@ -48,6 +47,23 @@ enum KeyLength {
 // ---1. SubBytes
 // ---2. ShiftRows
 // ---3. AddRoundKey
+
+// =============================================================================
+// Algorithm security
+// =============================================================================
+
+// According to NSA...
+// The design and strength of all key lengths of the AES algorithm (i.e., 128, 192 and 256)
+// are sufficient to protect classified information up to the SECRET level.
+// TOP SECRET information will require use of either the 192 or 256 key lengths.
+// The implementation of AES in products intended to protect national security
+// systems and/or information must be reviewed and certified by NSA prior to their
+// acquisition and use.
+
+// By 2006, the best known attacks were on 7 rounds for 128-bit keys, 8 rounds
+// for 192-bit keys, and 9 rounds for 256-bit keys.
+// see more: https://www.schneier.com/academic/archives/2001/01/improved_cryptanalys.html
+
 struct Aes {
     key: Vec<u8>,
     key_length: KeyLength,
@@ -216,29 +232,107 @@ impl Aes {
         output
     }
 
+    // In the MixColumns step, the four bytes of each column (32 bits) of the state
+    // are combined using an invertible linear transformation.Together with ShiftRows,
+    // MixColumns provides diffusion in the cipher.
+
+    // see more: https://en.wikipedia.org/wiki/Rijndael_MixColumns
+    fn mix_cols(&self, input: Block<typenum::U16>) -> Block<typenum::U16> {
+        let mut output = generic_array::GenericArray::default();
+
+        for i in 0..4 {
+            // logical columns are layed out as rows in memory
+            let index_start = i * 4;
+            let col = [
+                input[index_start],
+                input[index_start + 1],
+                input[index_start + 2],
+                input[index_start + 3],
+            ];
+            let mixed_col = self.mix_col(col);
+
+            output[index_start..index_start + 4].copy_from_slice(&mixed_col);
+        }
+
         output
     }
 
-        output[8] = output[10];
-        output[9] = output[11];
-        output[10] = temp_one;
-        output[11] = temp_two;
+    // mix_col mixes a single column of state by applying an invertible linear
+    // transformation. In particular, the column is used as a vector and is
+    // multiplied by the following circulant[0] MDS matrix[1] under Rijndael's finite field.
 
-        // row 4 << 3
-        let temp = output[15];
-        output[15] = output[14];
-        output[14] = output[13];
-        output[13] = output[12];
-        output[12] = temp;
+    // 2 3 1 1
+    // 1 2 3 1
+    // 1 1 2 3
+    // 3 1 1 2
+
+    // This operation is similar to the Hill Cipher[2]
+
+    // [0]: https://en.wikipedia.org/wiki/Circulant_matrix
+    // [1]: https://en.wikipedia.org/wiki/MDS_matrix
+    // [2]: https://en.wikipedia.org/wiki/Hill_cipher
+
+    fn mix_col(&self, input: [u8; 4]) -> [u8; 4] {
+        let mut output = [0u8; 4];
+
+        output[0] =
+            self.gf_mult(0x02, input[0]) ^ self.gf_mult(0x03, input[1]) ^ input[2] ^ input[3];
+        output[1] =
+            input[0] ^ self.gf_mult(0x02, input[1]) ^ self.gf_mult(0x03, input[2]) ^ input[3];
+        output[2] =
+            input[0] ^ input[1] ^ self.gf_mult(0x02, input[2]) ^ self.gf_mult(0x03, input[3]);
+        output[3] =
+            self.gf_mult(0x03, input[0]) ^ input[1] ^ input[2] ^ self.gf_mult(0x02, input[3]);
 
         output
     }
 
-    fn mix_cols(&self, input: Block<typenum::U128>) -> Block<typenum::U128> {
-        // for col in 0..4 {
-        //     for i in 0..4 {}
-        // }
-        todo!()
+    // gf_mult multiplies two bytes which represent the coefficients of polynomials
+    // under GF(2^8) with modulus x^8 + x^4 + x^3 + x + 1, Rijdael's finite field
+
+    // at the start and end of the algorithm, and the start and end of each
+    // iteration, this invariant is true: a b + p is the product
+    // - this is obviously true when the algorithm starts
+    // - and when the algorithm terminates, a or b will be zero so p will contain the product.
+
+    // see more
+    // - https://en.wikipedia.org/wiki/Finite_field_arithmetic#Rijndael's_(AES)_finite_field
+    // - https://en.wikipedia.org/wiki/Multiplication_algorithm#Russian_peasant_multiplication
+    fn gf_mult(&self, mut a: u8, mut b: u8) -> u8 {
+        let mut p = 0;
+
+        for _ in 0..8 {
+            // 1. if the rightmost bit of b is set, XOR the product p by a.
+            //    - this is polynomial addition
+            if (b & 0x1) != 0 {
+                p ^= a;
+            }
+
+            // 2. shift b one bit to the right, discarding the rightmost bit, and
+            //    making the leftmost bit have a value of zero
+            //    - this divides the polynomial by x, discarding the x0 term.
+            b >>= 1;
+
+            // 3. Keep track of whether the leftmost bit of a is set to one
+            let carry = (a & 0x80) != 0;
+
+            // 4. shift a one bit to the left, discarding the leftmost bit, and
+            //    making the new rightmost bit zero.
+            //    - this multiplies the polynomial by x,
+            //    - but we still need to take account of carry, the coefficient of x^7
+            a <<= 1;
+
+            // 5. if carry had a value of one, XOR a with 0x1b (00011011 in binary).
+            //    0x1b corresponds to the irreducible polynomial with the high term
+            //    eliminated.
+            //    - conceptually, the high term of the irreducible polynomial and
+            //      carry add modulo 2 to 0.
+            if carry {
+                a ^= 0x1b;
+            }
+        }
+
+        p // p now has the product
     }
 }
 
@@ -262,8 +356,6 @@ const SBOX: [u8; 256] = [
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 ];
 
-const fn gf_mult() {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,13 +370,86 @@ mod tests {
         let plaintext = *b"The quick brown ";
         let plaintext_block = generic_array::GenericArray::clone_from_slice(&plaintext);
 
-        let plaintext_subbed_block = aes.sub_bytes(plaintext_block);
-        let actual_output = plaintext_subbed_block.as_slice();
+        let actual_output = aes.sub_bytes(plaintext_block);
         let expected_output: [u8; 16] = [
             0x20, 0x45, 0x4d, 0xb7, 0xa3, 0x9d, 0xf9, 0xfb, 0x7f, 0xb7, 0xaa, 0x40, 0xa8, 0xf5,
             0x9f, 0xb7,
         ];
 
-        assert_eq!(actual_output, expected_output);
+        assert_eq!(actual_output.as_slice(), expected_output);
+    }
+
+    #[test]
+    fn test_shift_rows() {
+        let input = [
+            0x20, 0x45, 0x4d, 0xb7, 0xa3, 0x9d, 0xf9, 0xfb, 0x7f, 0xb7, 0xaa, 0x40, 0xa8, 0xf5,
+            0x9f, 0xb7,
+        ];
+        let input_state = generic_array::GenericArray::clone_from_slice(&input);
+
+        let aes = Aes {
+            key: Vec::new(),
+            key_length: KeyLength::Length128,
+        };
+
+        let actual_output = aes.shift_rows(input_state);
+        let expected_output = [
+            0x20, 0x9d, 0xaa, 0xb7, 0xa3, 0xb7, 0x9f, 0xb7, 0x7f, 0xf5, 0x4d, 0xfb, 0xa8, 0x45,
+            0xf9, 0x40,
+        ];
+
+        assert_eq!(actual_output.as_slice(), expected_output);
+    }
+
+    #[test]
+    fn test_mix_col() {
+        let inputs = [
+            [0xdb, 0x13, 0x53, 0x45],
+            [0xf2, 0x0a, 0x22, 0x5c],
+            [0x01, 0x01, 0x01, 0x01],
+            [0xc6, 0xc6, 0xc6, 0xc6],
+            [0xd4, 0xd4, 0xd4, 0xd5],
+            [0x2d, 0x26, 0x31, 0x4c],
+        ];
+        let aes = Aes {
+            key: Vec::new(),
+            key_length: KeyLength::Length128,
+        };
+
+        let expected_outputs = [
+            [0x8e, 0x4d, 0xa1, 0xbc],
+            [0x9f, 0xdc, 0x58, 0x9d],
+            [0x01, 0x01, 0x01, 0x01],
+            [0xc6, 0xc6, 0xc6, 0xc6],
+            [0xd5, 0xd5, 0xd7, 0xd6],
+            [0x4d, 0x7e, 0xbd, 0xf8],
+        ];
+
+        for i in 0..inputs.len() {
+            let actual_output = aes.mix_col(inputs[i]);
+            assert_eq!(actual_output, expected_outputs[i]);
+        }
+    }
+
+    #[test]
+    fn test_mix_cols() {
+        let input = [
+            0x20, 0x9d, 0xaa, 0xb7, 0xa3, 0xb7, 0x9f, 0xb7, 0x7f, 0xf5, 0x4d, 0xfb, 0xa8, 0x45,
+            0xf9, 0x40,
+        ];
+        let input_state = generic_array::GenericArray::clone_from_slice(&input);
+
+        let aes = Aes {
+            key: Vec::new(),
+            key_length: KeyLength::Length128,
+        };
+
+        let actual_output = aes.mix_cols(input_state);
+        let expected_output = [
+            0xe1, 0x53, 0x30, 0x22, 0xb7, 0xdb, 0xf3, 0xa3, 0x4c, 0xa2, 0x06, 0xd4, 0x3d, 0x72,
+            0xc4, 0xdf,
+        ];
+
+        assert_eq!(actual_output.as_slice(), expected_output);
     }
 }

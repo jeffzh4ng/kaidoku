@@ -6,10 +6,11 @@ use crate::crypto::stream::VernamCipherError;
 use super::Block;
 use super::BlockCipher;
 
+#[derive(Copy, Clone)]
 enum KeyLength {
-    Length128,
-    Length192,
-    Length256,
+    Length128 = 128,
+    Length192 = 192,
+    Length256 = 256,
 }
 
 // AES is based on a design principle known as a substitution–permutation network,
@@ -91,7 +92,7 @@ impl BlockCipher<typenum::U16> for Aes {
             KeyLength::Length192 => 12,
             KeyLength::Length256 => 14,
         };
-        let round_keys = self.key_expansion(&self.key, rounds);
+        let round_keys = self.key_expansion(rounds);
 
         // 2. initial round key addition
         let mut encrypted_block = block;
@@ -124,37 +125,73 @@ impl Aes {
     // round keys. The three AES variants have a different number of rounds.
     // Each variant requires a separate 128-bit round key for each round plus one
     // more. The key schedule produces the needed round keys from the initial key.
-    // Using different keys for each round protects against slide attacks[0]
+    // Using different keys for each round to protect against slide attacks[0]
 
     // [0]: https://en.wikipedia.org/wiki/Slide_attack
 
     // see more: https://en.wikipedia.org/wiki/AES_key_schedule
-    fn key_expansion(&self, key: &Vec<u8>, rounds: usize) -> Vec<Block<typenum::U16>> {
-        // let mut round_keys = Vec::new();
+    fn key_expansion(&self, rounds: usize) -> Vec<Block<typenum::U16>> {
+        let num_words_in_key = self.key_length as usize / 32; // 4, 6, or 8
+        let round_key_words_length = 4 * rounds; // because round_keys are always 128 bits
+        let mut round_key_words = Vec::with_capacity(round_key_words_length);
+        let mut i = 0;
 
-        // let key_words = self.key_words(key);
+        // 1. K0 is the original key
+        // so build u32 words from the key's u8s and set them
+        while i < num_words_in_key {
+            let word = u32::from_be_bytes([
+                self.key[i],
+                self.key[i + 1],
+                self.key[i + 2],
+                self.key[i + 3],
+            ]);
 
-        // for i in 0..rounds + 1 {
-        //     // rounds + 1 keys required
-        //     round_keys.push(GenericArray::from_slice(&[0u8; 16]));
-        // }
+            round_key_words[i] = word;
+            i += 1;
+        }
 
-        // 1. rotword
+        // 2. build 128 bit round keys from K1 -> K10/12/14
+        // since the key schedule operates on 32 bit words, we have to
+        // generate {4 * rounds} words
+        let mut temp;
+        while i < round_key_words.len() {
+            temp = round_key_words[i];
+            if i % num_words_in_key == 0 {
+                temp = self.sub_word(temp.rotate_left(8)) ^ RCON[i / num_words_in_key]
+            } else if num_words_in_key > 6 && i % num_words_in_key == 4 {
+                temp = self.sub_word(temp)
+            }
 
-        // 2. subword
+            round_key_words[i] = round_key_words[i - num_words_in_key] ^ temp;
+            i += 1;
+        }
 
-        // 3. rcon
+        // 3. coalesce the {4 * rounds} u32 words into 10/12/14 u8 round keys
+        let round_key_buffers = round_key_words
+            .chunks(4) // since round keys are 128 bits
+            .map(|chunked_key_words| {
+                // Vec::from(u32::to_be_bytes(chunked_key_words))) will not work
+                // b/c chunked_key-wirds is a &[u32], so we .iter.flat_map(|&|)
+                chunked_key_words
+                    .iter()
+                    .flat_map(|&word| u32::to_be_bytes(word).to_vec())
+                    .collect::<Vec<u8>>()
+            })
+            .map(|buffered_round_key| {
+                generic_array::GenericArray::clone_from_slice(&buffered_round_key)
+            })
+            .collect();
 
-        todo!()
+        round_key_buffers
     }
 
-    fn key_words(&self, key: &Vec<u8>) -> [u32; 4] {
-        [
-            u32::from_be_bytes([key[0x0], key[0x1], key[0x2], key[0x3]]),
-            u32::from_be_bytes([key[0x4], key[0x5], key[0x6], key[0x7]]),
-            u32::from_be_bytes([key[0x8], key[0x9], key[0xa], key[0xb]]),
-            u32::from_be_bytes([key[0xc], key[0xd], key[0xe], key[0xf]]),
-        ]
+    fn sub_word(&self, word: u32) -> u32 {
+        let mut bytes = u32::to_be_bytes(word);
+        for i in 0..bytes.len() {
+            bytes[i] = SBOX[bytes[i] as usize]; // SAFETY: u8 will never be larger than 32 bits
+        }
+
+        u32::from_be_bytes(bytes)
     }
 
     // The AddRoundKey step combines a round key with the state with the XOR operation.
@@ -215,7 +252,7 @@ impl Aes {
     // case AES would degenerate into four independent block ciphers.
 
     fn shift_rows(&self, input: Block<typenum::U16>) -> Block<typenum::U16> {
-        let mut output = input.clone();
+        let mut output = input;
 
         // memory
         // 0  1  2  3
@@ -264,7 +301,7 @@ impl Aes {
         output
     }
 
-    // mix_col mixes a single column of state by applying an invertible linear
+    // mix_col mixes a single column 2 state by applying an invertible linear
     // transformation. In particular, the column is used as a vector and is
     // multiplied by the following circulant[0] MDS matrix[1] under Rijndael's finite field.
 
@@ -361,6 +398,11 @@ const SBOX: [u8; 256] = [
     0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e,
     0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
+];
+
+const RCON: [u32; 10] = [
+    0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000,
+    0x1B000000, 0x36000000,
 ];
 
 #[cfg(test)]

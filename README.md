@@ -1,4 +1,4 @@
-# fuin
+# kaidoku
 cryptographic protocols
 
 ![](./uzumaki-fuinjutsu.webp)

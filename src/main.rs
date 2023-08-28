@@ -32,6 +32,7 @@ use clap::{Parser, Subcommand};
 // SDLC
 // - cd: lints, benchmarks, msrv, tests
 // - documentation: reference golang's crypto std for standard references
+// - insecure opt in crate feature
 
 /// commandline cryptographic protocols
 #[derive(Parser)]

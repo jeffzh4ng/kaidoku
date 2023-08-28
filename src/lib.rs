@@ -11,5 +11,6 @@ extern crate alloc; // extern crate declaration still required post rust 2018 fo
 
 pub mod attack;
 pub mod cipher;
+pub mod digest;
 pub mod encode;
 pub mod rng;

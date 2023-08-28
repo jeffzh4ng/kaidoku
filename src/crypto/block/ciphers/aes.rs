@@ -1,4 +1,5 @@
-use generic_array::typenum;
+use generic_array::typenum::U16;
+use generic_array::GenericArray;
 
 use crate::crypto::stream::VernamCipher;
 use crate::crypto::stream::VernamCipherError;
@@ -70,7 +71,7 @@ struct Aes {
     key_length: KeyLength,
 }
 
-impl BlockCipher<typenum::U16> for Aes {
+impl BlockCipher<U16> for Aes {
     fn new(key: Vec<u8>) -> Self {
         let key_length = match key.len() {
             16 => KeyLength::Length128,
@@ -85,7 +86,7 @@ impl BlockCipher<typenum::U16> for Aes {
         Aes { key, key_length }
     }
 
-    fn encrypt_block(&self, block: Block<typenum::U16>) -> Block<typenum::U16> {
+    fn encrypt_block(&self, block: Block<U16>) -> Block<U16> {
         // 1. key expansion
         let rounds = match self.key_length {
             KeyLength::Length128 => 10,
@@ -93,29 +94,29 @@ impl BlockCipher<typenum::U16> for Aes {
             KeyLength::Length256 => 14,
         };
         let round_keys = self.key_expansion(rounds);
+        println!("deer: {} {:?}", round_keys.len(), round_keys);
 
         // 2. initial round key addition
         let mut encrypted_block = block;
         encrypted_block = self.add_round_key(encrypted_block, round_keys[0]);
 
-        // 3. 9, 11, or 13 rounds
-        for round in 0..rounds - 1 {
+        // 3. round ranges from 1..[9, 11, or 13]
+        for round in 1..rounds {
             encrypted_block = self.sub_bytes(encrypted_block);
             encrypted_block = self.shift_rows(encrypted_block);
             encrypted_block = self.mix_cols(encrypted_block);
-            // using round + 1 as index since the 0th roudn key was used to XOR the plaintext
-            encrypted_block = self.add_round_key(encrypted_block, round_keys[round + 1]);
+            encrypted_block = self.add_round_key(encrypted_block, round_keys[round]);
         }
 
         // 4. final round (making 10, 12, or 14 rounds total)
         encrypted_block = self.sub_bytes(encrypted_block);
         encrypted_block = self.shift_rows(encrypted_block);
-        encrypted_block = self.add_round_key(encrypted_block, round_keys[10]);
+        encrypted_block = self.add_round_key(encrypted_block, round_keys[rounds]);
 
         encrypted_block
     }
 
-    fn decrypt_block(&self, block: Block<typenum::U16>) -> Block<typenum::U16> {
+    fn decrypt_block(&self, block: Block<U16>) -> Block<U16> {
         todo!()
     }
 }
@@ -130,44 +131,46 @@ impl Aes {
     // [0]: https://en.wikipedia.org/wiki/Slide_attack
 
     // see more: https://en.wikipedia.org/wiki/AES_key_schedule
-    fn key_expansion(&self, rounds: usize) -> Vec<Block<typenum::U16>> {
-        let num_words_in_key = self.key_length as usize / 32; // 4, 6, or 8
-        let round_key_words_length = 4 * rounds; // because round_keys are always 128 bits
-        let mut round_key_words = Vec::with_capacity(round_key_words_length);
+    fn key_expansion(&self, rounds: usize) -> Vec<Block<U16>> {
+        let words_per_key_size = self.key_length as usize / 32; // 4, 6, or 8
+        let word_length = 4 * (rounds + 1); // because round_keys are always 128 bits, 4*32=128
+        let mut u32_words = vec![0; word_length];
         let mut i = 0;
 
-        // 1. K0 is the original key
+        // 1. K0 is set to the root key
         // so build u32 words from the key's u8s and set them
-        while i < num_words_in_key {
+        while i < words_per_key_size {
             let word = u32::from_be_bytes([
-                self.key[i],
-                self.key[i + 1],
-                self.key[i + 2],
-                self.key[i + 3],
+                self.key[i * 4],
+                self.key[i * 4 + 1],
+                self.key[i * 4 + 2],
+                self.key[i * 4 + 3],
             ]);
 
-            round_key_words[i] = word;
+            u32_words[i] = word;
             i += 1;
         }
 
         // 2. build 128 bit round keys from K1 -> K10/12/14
-        // since the key schedule operates on 32 bit words, we have to
-        // generate {4 * rounds} words
-        let mut temp;
-        while i < round_key_words.len() {
-            temp = round_key_words[i];
-            if i % num_words_in_key == 0 {
-                temp = self.sub_word(temp.rotate_left(8)) ^ RCON[i / num_words_in_key]
-            } else if num_words_in_key > 6 && i % num_words_in_key == 4 {
-                temp = self.sub_word(temp)
+        // since the key schedule operates on 32 bit words, we have to gen {4*rounds} words
+        let mut prev;
+        while i < u32_words.len() {
+            prev = u32_words[i - 1];
+            if i % words_per_key_size == 0 {
+                // TODO why -1?
+                prev = self.sub_word(prev.rotate_left(8)) ^ RCON[i / words_per_key_size];
+            } else if words_per_key_size > 6 && i % words_per_key_size == 4 {
+                prev = self.sub_word(prev);
             }
 
-            round_key_words[i] = round_key_words[i - num_words_in_key] ^ temp;
+            u32_words[i] = u32_words[i - words_per_key_size] ^ prev;
             i += 1;
         }
 
+        // K1 = 07d58f657e52bde6fb34ca837947b2ea
+
         // 3. coalesce the {4 * rounds} u32 words into 10/12/14 u8 round keys
-        let round_key_buffers = round_key_words
+        let round_key_buffers = u32_words
             .chunks(4) // since round keys are 128 bits
             .map(|chunked_key_words| {
                 // Vec::from(u32::to_be_bytes(chunked_key_words))) will not work
@@ -178,7 +181,7 @@ impl Aes {
                     .collect::<Vec<u8>>()
             })
             .map(|buffered_round_key| {
-                generic_array::GenericArray::clone_from_slice(&buffered_round_key)
+                GenericArray::<u8, U16>::clone_from_slice(&buffered_round_key)
             })
             .collect();
 
@@ -197,18 +200,15 @@ impl Aes {
     // The AddRoundKey step combines a round key with the state with the XOR operation.
     // For each round, a round key is derived from the main key using Rijndael's
     // key schedule; each round key is the same size as the state.
-    fn add_round_key(
-        &self,
-        input: Block<typenum::U16>,
-        key: Block<typenum::U16>,
-    ) -> Block<typenum::U16> {
+    fn add_round_key(&self, input: Block<U16>, key: Block<U16>) -> Block<U16> {
         let a = input.into_iter();
         let b = key.into_iter();
         let xor_cipher = VernamCipher::new(a, b);
 
         let output = xor_cipher
             .collect::<Result<Vec<u8>, VernamCipherError>>()
-            .unwrap(); // SAFETY: VermamCipherError only contains unequal input length, which can't happen since both input and key are typed with typenum::U16
+            .unwrap(); // SAFETY: VermamCipherError only contains unequal input length
+                       // which can't happen since both input and key are typed with U16
 
         output.into_iter().collect()
     }
@@ -230,7 +230,7 @@ impl Aes {
     // and also any opposite fixed points, i.e. S(a_{i,j}) XOR a_{i,j} != FF_{16}
 
     // see more: https://en.wikipedia.org/wiki/Rijndael_S-box
-    fn sub_bytes(&self, input: Block<typenum::U16>) -> Block<typenum::U16> {
+    fn sub_bytes(&self, input: Block<U16>) -> Block<U16> {
         let mut output = input;
 
         for i in 0..input.len() {
@@ -251,7 +251,7 @@ impl Aes {
     // this step is to avoid the columns being encrypted independently, in which
     // case AES would degenerate into four independent block ciphers.
 
-    fn shift_rows(&self, input: Block<typenum::U16>) -> Block<typenum::U16> {
+    fn shift_rows(&self, input: Block<U16>) -> Block<U16> {
         let mut output = input;
 
         // memory
@@ -281,8 +281,8 @@ impl Aes {
     // MixColumns provides diffusion in the cipher.
 
     // see more: https://en.wikipedia.org/wiki/Rijndael_MixColumns
-    fn mix_cols(&self, input: Block<typenum::U16>) -> Block<typenum::U16> {
-        let mut output = generic_array::GenericArray::default();
+    fn mix_cols(&self, input: Block<U16>) -> Block<U16> {
+        let mut output = GenericArray::default();
 
         for i in 0..4 {
             // logical columns are layed out as rows in memory
@@ -380,7 +380,14 @@ impl Aes {
     }
 }
 
-// The S-box maps an 8-bit input, c, to an 8-bit output, s = S(c). Both the input and output are interpreted as polynomials over GF(2). First, the input is mapped to its multiplicative inverse in GF(2^8) = GF(2) [x]/(x8 + x4 + x3 + x + 1), Rijndael's finite field. Zero, as the identity, is mapped to itself. This transformation is known as the Nyberg S-box after its inventor Kaisa Nyberg. The multiplicative inverse is then transformed using the following affine transformation:
+// The S-box maps an 8-bit input, c, to an 8-bit output, s = S(c).
+// Both the input and output are interpreted as polynomials over GF(2).
+
+// 1. First, the input is mapped to its multiplicative inverse in GF(2^8) = GF(2)
+// [x]/(x8 + x4 + x3 + x + 1), Rijndael's finite field. Zero, as the identity, is mapped to itself.
+// This transformation is known as the Nyberg S-box after its inventor Kaisa Nyberg.
+
+// 2. The multiplicative inverse is then transformed using an affine transformation.
 const SBOX: [u8; 256] = [
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
     0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -400,9 +407,18 @@ const SBOX: [u8; 256] = [
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 ];
 
-const RCON: [u32; 10] = [
-    0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000,
-    0x1B000000, 0x36000000,
+const RCON: [u32; 11] = [
+    0x00_00_00_00,
+    0x01_00_00_00,
+    0x02_00_00_00,
+    0x04_00_00_00,
+    0x08_00_00_00,
+    0x10_00_00_00,
+    0x20_00_00_00,
+    0x40_00_00_00,
+    0x80_00_00_00,
+    0x1B_00_00_00,
+    0x36_00_00_00,
 ];
 
 #[cfg(test)]
@@ -415,9 +431,9 @@ mod tests {
             0xe1, 0x53, 0x30, 0x22, 0xb7, 0xdb, 0xf3, 0xa3, 0x4c, 0xa2, 0x06, 0xd4, 0x3d, 0x72,
             0xc4, 0xdf,
         ];
-        let state_input = generic_array::GenericArray::clone_from_slice(&state);
+        let state_input = GenericArray::clone_from_slice(&state);
         let key = *b"abcdefghijklmnop";
-        let key_input = generic_array::GenericArray::clone_from_slice(&key);
+        let key_input = GenericArray::clone_from_slice(&key);
 
         let aes = Aes {
             key: Vec::new(),
@@ -441,7 +457,7 @@ mod tests {
         };
 
         let plaintext = *b"The quick brown ";
-        let plaintext_block = generic_array::GenericArray::clone_from_slice(&plaintext);
+        let plaintext_block = GenericArray::clone_from_slice(&plaintext);
 
         let actual_output = aes.sub_bytes(plaintext_block);
         let expected_output: [u8; 16] = [
@@ -458,7 +474,7 @@ mod tests {
             0x20, 0x45, 0x4d, 0xb7, 0xa3, 0x9d, 0xf9, 0xfb, 0x7f, 0xb7, 0xaa, 0x40, 0xa8, 0xf5,
             0x9f, 0xb7,
         ];
-        let input_state = generic_array::GenericArray::clone_from_slice(&input);
+        let input_state = GenericArray::clone_from_slice(&input);
 
         let aes = Aes {
             key: Vec::new(),
@@ -510,7 +526,7 @@ mod tests {
             0x20, 0x9d, 0xaa, 0xb7, 0xa3, 0xb7, 0x9f, 0xb7, 0x7f, 0xf5, 0x4d, 0xfb, 0xa8, 0x45,
             0xf9, 0x40,
         ];
-        let input_state = generic_array::GenericArray::clone_from_slice(&input);
+        let input_state = GenericArray::clone_from_slice(&input);
 
         let aes = Aes {
             key: Vec::new(),
@@ -524,5 +540,17 @@ mod tests {
         ];
 
         assert_eq!(actual_output.as_slice(), expected_output);
+    }
+
+    #[test]
+    fn encrypt_block() {
+        let key = *b"YELLOW SUBMARINE";
+        let aes = Aes::new(key.to_vec());
+
+        let plaintext = b"ABCDEFGHIJKLMNOP";
+        let plaintext_block = GenericArray::clone_from_slice(plaintext);
+        let encrypted_block = aes.encrypt_block(plaintext_block);
+
+        println!("moose: {:?}", encrypted_block.as_slice());
     }
 }

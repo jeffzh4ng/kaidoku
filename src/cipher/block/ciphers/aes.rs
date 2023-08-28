@@ -1,8 +1,8 @@
 use generic_array::typenum::U16;
 use generic_array::GenericArray;
 
-use crate::crypto::stream::VernamCipher;
-use crate::crypto::stream::VernamCipherError;
+use crate::cipher::stream::VernamCipher;
+use crate::cipher::stream::VernamCipherError;
 
 use super::Block;
 use super::BlockCipher;

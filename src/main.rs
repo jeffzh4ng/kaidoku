@@ -4,17 +4,34 @@ use ::rand::prelude::*;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
-// TODOs
+// ROADMAP:
+// encrypt and authenticate a message across an insecure channel
+
+// 1. Generate a random AES key.
+// 2. Use the AES key to encrypt the message.
+// 3. Hash the encrypted message using SHA-256.
+
+// 4. Read the sender's RSA secret key from "wire format."
+// 5. Use the sender's RSA secret key to sign the hash.
+// 6. Read the recipient's RSA public key from wire format.
+
+// 7. Use the recipient's public key to encrypt the AES key, hash, and signature.
+// 8. Convert the encrypted key, hash, and signature to wire format.
+// 9. Concatenate with the encrypted message.
 
 // API:
 // - offer macros
 // - lazy block ciphers?
 // - block mode traits (parallelizable, random read)
 // - cli: files, stdin
+
+// INTERNAL:
 // - remove verbose package qualifiers
+// - no std, no alloc
 
 // SDLC
 // - cd: lints, benchmarks, msrv, tests
+// - documentation: reference golang's crypto std for standard references
 
 /// commandline cryptographic protocols
 #[derive(Parser)]
@@ -95,8 +112,8 @@ fn main() -> Result<()> {
                 "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
             let key = "ICE";
 
-            let ciphertext = kaidoku::crypto::stream::vernam_cipher_with_key(plaintext, key)
-                .collect::<Result<Vec<u8>, kaidoku::crypto::stream::VernamCipherError>>()
+            let ciphertext = kaidoku::cipher::stream::vernam_cipher_with_key(plaintext, key)
+                .collect::<Result<Vec<u8>, kaidoku::cipher::stream::VernamCipherError>>()
                 .context("unable to encrypt plaintext")?;
             // .unwrap()
             // .into_iter();
@@ -163,8 +180,8 @@ fn test_runner() {
     let plaintext = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
     let key = "ICE";
 
-    let ciphertext = kaidoku::crypto::stream::vernam_cipher_with_key(plaintext, key)
-        .collect::<Result<Vec<u8>, kaidoku::crypto::stream::VernamCipherError>>()
+    let ciphertext = kaidoku::cipher::stream::vernam_cipher_with_key(plaintext, key)
+        .collect::<Result<Vec<u8>, kaidoku::cipher::stream::VernamCipherError>>()
         .unwrap()
         .into_iter();
     let ciphertext_hex =

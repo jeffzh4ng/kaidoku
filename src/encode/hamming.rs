@@ -22,21 +22,21 @@
 //! assert_eq!(expected_hamming_distance, actual_hamming_distance);
 //! ```
 
-use crate::crypto;
+use crate::cipher;
 
 use thiserror::Error;
 
 /// Error type for Hamming distance calculations.
 ///
 /// This type is a wrapper around the `VernamCipherError` provided by the
-/// `crypto::vernam` module. It represents errors that may occur during the
+/// `cipher::vernam` module. It represents errors that may occur during the
 /// process of calculating the Hamming distance between two sequences of bytes.
 #[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum HammingDistanceError {
     /// Wrapper around the Vernam cipher error
     #[error(transparent)]
-    VernamError(#[from] crypto::stream::VernamCipherError),
+    VernamError(#[from] cipher::stream::VernamCipherError),
 }
 
 /// Calculate the Hamming distance between two sequences of bytes.
@@ -62,8 +62,8 @@ where
     I: Iterator<Item = u8>,
     J: Iterator<Item = u8>,
 {
-    let xor_cipher = crypto::stream::VernamCipher::new(a, b)
-        .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()?;
+    let xor_cipher = cipher::stream::VernamCipher::new(a, b)
+        .collect::<Result<Vec<u8>, cipher::stream::VernamCipherError>>()?;
 
     // we can use the hamming weight (population count of the XOR) to calculate the hamming distance
     // the number of 1s in the XOR is the number of bits that are different between the two inputs

@@ -52,7 +52,7 @@ impl<N: ArrayLength<u8>, C: BlockCipher<N>, P: Padder<N>> BlockMode<N, C, P> for
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crypto::block::{ciphers, pads};
+    use crate::cipher::block::{ciphers, pads};
 
     #[test]
     fn test_encrypt_no_pad() {

@@ -6,7 +6,7 @@ use std::{
     path::{self, Path},
 };
 
-use crate::{crypto, encode};
+use crate::{cipher, encode};
 
 use thiserror::Error;
 
@@ -20,7 +20,7 @@ pub enum VernamAttackError {
     HexError(#[from] encode::hex::HexEncodingError),
 
     #[error(transparent)]
-    VernamError(#[from] crypto::stream::VernamCipherError),
+    VernamError(#[from] cipher::stream::VernamCipherError),
 
     #[error(transparent)]
     IoError(#[from] io::Error),
@@ -59,8 +59,8 @@ pub fn monoalphabetic_attack(
         let c = ciphertext.clone().into_iter();
         let k_stretched = std::iter::repeat(k).take(ciphertext.len());
 
-        let plain_bytes = crypto::stream::VernamCipher::new(c, k_stretched.clone())
-            .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()?;
+        let plain_bytes = cipher::stream::VernamCipher::new(c, k_stretched.clone())
+            .collect::<Result<Vec<u8>, cipher::stream::VernamCipherError>>()?;
 
         // convert bytes to string, calculate the score, and store it in the map
         let plaintext = String::from_utf8(plain_bytes);
@@ -157,8 +157,8 @@ pub fn polyalphabetic_attack(path_location: &str) -> String {
         .take(ciphertext_bytes.len());
 
     let plain_bytes =
-        crypto::stream::VernamCipher::new(ciphertext_bytes.into_iter(), probable_key_stretched)
-            .collect::<Result<Vec<u8>, crypto::stream::VernamCipherError>>()
+        cipher::stream::VernamCipher::new(ciphertext_bytes.into_iter(), probable_key_stretched)
+            .collect::<Result<Vec<u8>, cipher::stream::VernamCipherError>>()
             .unwrap();
     let plaintext = String::from_utf8(plain_bytes).unwrap();
 

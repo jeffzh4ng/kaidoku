@@ -3,7 +3,7 @@ use super::pads::Padder;
 use super::Block;
 
 // pub mod cbc;
-// pub mod ecb;
+pub mod ecb;
 
 /// `BlockMode` is a trait representing a mode of operation for block ciphers.
 ///
@@ -34,6 +34,6 @@ where
     P: Padder<N>,
 {
     fn new(cipher: C, padder: P) -> Self;
-    fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<Block<N>>;
-    fn decrypt(&mut self, ciphertext: Vec<Block<N>>) -> Vec<u8>;
+    fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<u8>;
+    fn decrypt(&mut self, ciphertext: Vec<u8>) -> Vec<u8>;
 }

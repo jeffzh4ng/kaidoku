@@ -5,12 +5,16 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 // TODOs
-// - remove verbose package qualifiers
-// - cli: files, stdin
-// - cd: lints, benchmarks, msrv, tests
+
+// API:
 // - offer macros
+// - lazy block ciphers?
 // - block mode traits (parallelizable, random read)
-// - look into encode iterators taking shared views rather than owned
+// - cli: files, stdin
+// - remove verbose package qualifiers
+
+// SDLC
+// - cd: lints, benchmarks, msrv, tests
 
 /// commandline cryptographic protocols
 #[derive(Parser)]

@@ -21,7 +21,15 @@ use super::Padder;
 // The padding can be removed unambiguously since all input is
 // padded and no padding string is a suffix of another. This
 // padding method is well-defined if and only if k < 256;
+
+#[derive(Default)]
 pub struct Pkcs7 {}
+
+impl Pkcs7 {
+    pub fn new() -> Self {
+        Pkcs7 {}
+    }
+}
 
 impl<N: ArrayLength<u8>> Padder<N> for Pkcs7 {
     fn pad(&self, plaintext: Vec<u8>) -> Vec<Block<N>> {

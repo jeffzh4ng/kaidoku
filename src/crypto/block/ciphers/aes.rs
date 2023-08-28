@@ -66,7 +66,7 @@ enum KeyLength {
 // for 192-bit keys, and 9 rounds for 256-bit keys.
 // see more: https://www.schneier.com/academic/archives/2001/01/improved_cryptanalys.html
 
-struct Aes {
+pub struct Aes {
     key: Vec<u8>,
     key_length: KeyLength,
 }

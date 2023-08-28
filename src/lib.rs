@@ -1,9 +1,9 @@
 // #![warn(missing_docs)]
 // #![deny(warnings)]
 
-//! # fuin
+//! # kaidoku
 //!
-//! `fuin` provides cryptographic protocols meant for secure communication.
+//! `kaidoku` provides cryptographic protocols meant for secure communication.
 //! The project is unaudited, and intended for educational and experimental purposes.
 //! Please do not use this software in production under any circumstances.
 

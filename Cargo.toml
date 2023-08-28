@@ -1,12 +1,12 @@
 [package]
-name = "fuin"
+name = "kaidoku"
 version = "0.1.0"
 edition = "2021"
 authors = ["jeff <zhang.jeffreyd@gmail.com>"]
 description = "Unaudited crypto protocols intended for educational and experimental use cases"
 license = "MIT"
 license-file = "LICENSE.md"
-repository = "https://github.com/jeffzh4ng/fuin"
+repository = "https://github.com/jeffzh4ng/kaidoku"
 keywords = ["cryptography"]
 categories = ["cryptography", "command-line-utilities"]
 

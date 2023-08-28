@@ -166,8 +166,6 @@ impl Aes {
             i += 1;
         }
 
-        // K1 = 07d58f657e52bde6fb34ca837947b2ea
-
         // 3. coalesce the {4 * rounds} u32 words into 10/12/14 u8 round keys
         let round_key_buffers = u32_words
             .chunks(4) // since round keys are 128 bits

@@ -91,8 +91,8 @@ fn main() -> Result<()> {
                 "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
             let key = "ICE";
 
-            let ciphertext = fuin::crypto::stream::vernam_cipher_with_key(plaintext, key)
-                .collect::<Result<Vec<u8>, fuin::crypto::stream::VernamCipherError>>()
+            let ciphertext = kaidoku::crypto::stream::vernam_cipher_with_key(plaintext, key)
+                .collect::<Result<Vec<u8>, kaidoku::crypto::stream::VernamCipherError>>()
                 .context("unable to encrypt plaintext")?;
             // .unwrap()
             // .into_iter();
@@ -136,12 +136,12 @@ fn test_runner() {
 
     // challenge 3: monoalphabetic vernam attack
     let ciphertext = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-    let plaintext = fuin::attack::vernam::monoalphabetic_attack(ciphertext);
+    let plaintext = kaidoku::attack::vernam::monoalphabetic_attack(ciphertext);
     println!("single byte XOR attack: {}", plaintext.unwrap().unwrap().1);
 
     // challenge 4: monoalphabetic vernam attack (file variation)
     let path = "/Users/jeff/Documents/repos/fuin/tests/data/monoalphabetic_vernam_ciphertext.txt";
-    let plaintext = fuin::attack::vernam::monoalphabetic_attack_file_variation(path);
+    let plaintext = kaidoku::attack::vernam::monoalphabetic_attack_file_variation(path);
     println!("single byte XOR from file attack: {}", plaintext.unwrap());
 
     // -------------polyalphabetic "polyshift" ciphers--------------------------
@@ -159,18 +159,19 @@ fn test_runner() {
     let plaintext = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
     let key = "ICE";
 
-    let ciphertext = fuin::crypto::stream::vernam_cipher_with_key(plaintext, key)
-        .collect::<Result<Vec<u8>, fuin::crypto::stream::VernamCipherError>>()
+    let ciphertext = kaidoku::crypto::stream::vernam_cipher_with_key(plaintext, key)
+        .collect::<Result<Vec<u8>, kaidoku::crypto::stream::VernamCipherError>>()
         .unwrap()
         .into_iter();
-    let ciphertext_hex = fuin::encode::hex::ByteToHexEncoder::new(ciphertext) // TODO: look into iterators over references
-        .collect::<Result<String, fuin::encode::hex::HexEncodingError>>()
-        .unwrap();
+    let ciphertext_hex =
+        kaidoku::encode::hex::ByteToHexEncoder::new(ciphertext) // TODO: look into iterators over references
+            .collect::<Result<String, kaidoku::encode::hex::HexEncodingError>>()
+            .unwrap();
     println!("ciphertext_hex: {}", ciphertext_hex);
 
     // challenge 6: polyalphabetic vernam attack
     let path = "/Users/jeff/Documents/repos/fuin/tests/data/polyalphabetic_vernam_ciphertext.txt";
-    let plaintext = fuin::attack::vernam::polyalphabetic_attack(path);
+    let plaintext = kaidoku::attack::vernam::polyalphabetic_attack(path);
     println!("polyalphabetic vernam attack: {}", plaintext);
 
     // joseph mauborgne recognized if the key was "endless and senseless",
@@ -190,7 +191,7 @@ fn test_runner() {
 
     let seed = 1131464071u32;
     let seed_bytes = seed.to_be_bytes();
-    let mut mt = fuin::rng::MT::from_seed(seed_bytes);
+    let mut mt = kaidoku::rng::MT::from_seed(seed_bytes);
 
     let handle = thread::spawn(move || {
         for _ in 0..2 {

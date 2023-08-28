@@ -11,7 +11,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use fuin::encode::hamming::distance;
+//! use kaidoku::encode::hamming::distance;
 //!
 //! let a = "this is a test".bytes();
 //! let b = "wokka wokka!!!".bytes();
@@ -47,7 +47,7 @@ pub enum HammingDistanceError {
 /// # Examples
 ///
 /// ```rust
-/// use fuin::encode::hamming::distance;
+/// use kaidoku::encode::hamming::distance;
 ///
 /// let a = "this is a test".bytes();
 /// let b = "wokka wokka!!!".bytes();

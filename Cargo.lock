@@ -202,20 +202,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fuin"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bindgen",
- "clap",
- "generic-array",
- "log",
- "pkg-config",
- "rand",
- "thiserror",
-]
-
-[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -263,6 +249,20 @@ dependencies = [
  "hermit-abi",
  "rustix",
  "windows-sys",
+]
+
+[[package]]
+name = "kaidoku"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bindgen",
+ "clap",
+ "generic-array",
+ "log",
+ "pkg-config",
+ "rand",
+ "thiserror",
 ]
 
 [[package]]

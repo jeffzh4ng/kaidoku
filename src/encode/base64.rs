@@ -9,7 +9,7 @@
 //! Encoding a string into Base64:
 //!
 //! ```rust
-//! use fuin::encode::base64::ByteToBase64Encoder;
+//! use kaidoku::encode::base64::ByteToBase64Encoder;
 //!
 //! let data = b"Hello, World!";
 //! let mut encoder = ByteToBase64Encoder::new(data.iter().cloned());
@@ -21,7 +21,7 @@
 //! Decoding a Base64 string into bytes:
 //!
 //! ```rust
-//! use fuin::encode::base64::Base64ToByteDecoder;
+//! use kaidoku::encode::base64::Base64ToByteDecoder;
 //!
 //! let data = "SGVsbG8sIFdvcmxkIQ==";
 //! let mut decoder = Base64ToByteDecoder::new(data.chars());

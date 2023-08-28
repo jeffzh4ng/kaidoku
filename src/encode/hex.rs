@@ -8,7 +8,7 @@
 //! Decoding a hex string to bytes:
 //!
 //! ```rust
-//! use fuin::encode::hex::{HexToByteDecoder, HexEncodingError};
+//! use kaidoku::encode::hex::{HexToByteDecoder, HexEncodingError};
 //!
 //! let decoder = HexToByteDecoder::new("6f6f6d".chars());
 //! let decoded_bytes = decoder.collect::<Result<Vec<u8>, HexEncodingError>>().unwrap();
@@ -18,7 +18,7 @@
 //! Encoding a byte stream to hex
 //!
 //! ``` rust
-//! use fuin::encode::hex::{ByteToHexEncoder, HexEncodingError};
+//! use kaidoku::encode::hex::{ByteToHexEncoder, HexEncodingError};
 //! let encoder = ByteToHexEncoder::new(vec![0x6f, 0x6f, 0x6d].into_iter());
 //! let encoded_string = encoder.collect::<Result<String, HexEncodingError>>().unwrap();
 //! assert_eq!(encoded_string, "6f6f6d");

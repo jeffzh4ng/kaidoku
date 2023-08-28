@@ -5,7 +5,7 @@
 /// # Examples
 ///
 /// ```
-/// use fuin::encode::utils;
+/// use kaidoku::encode::utils;
 ///
 /// let c = '漢';
 /// let bytes = utils::char_to_bytes(c);

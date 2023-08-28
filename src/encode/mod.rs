@@ -14,7 +14,7 @@
 //! # Examples
 //!  
 //! ```rust
-//! use fuin::encode::{base64, hamming, hex, utils};
+//! use kaidoku::encode::{base64, hamming, hex, utils};
 //!
 //! // Example usage of the base64 submodule
 //! let data = b"Hello, World!";

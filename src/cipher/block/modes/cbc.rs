@@ -1,86 +1,146 @@
 use std::marker;
 
 use generic_array::{ArrayLength, GenericArray};
+use rand::RngCore;
 
 use super::BlockMode;
-use crate::crypto::{
-    block::{ciphers::BlockCipher, pads::Padder, Block},
+use crate::cipher::{
+    block::{ciphers::BlockCipher, pads::Padder},
     stream::{VernamCipher, VernamCipherError},
 };
 
-struct Cbc<N, C, P>
+struct Cbc<N, R, C, P>
 where
     N: ArrayLength<u8>,
+    R: RngCore,
     C: BlockCipher<N>,
     P: Padder<N>,
 {
-    iv: Vec<u8>,
+    rng: R,
     cipher: C,
     padder: P,
-    _marker: marker::PhantomData<N>,
+    _marker: marker::PhantomData<N>, // required since N ties C and P together without being used directly
 }
 
-impl<N, C, P> BlockMode<N, C, P> for Cbc<N, C, P>
+impl<N, R, C, P> Cbc<N, R, C, P>
 where
     N: ArrayLength<u8>,
+    R: RngCore,
     C: BlockCipher<N>,
     P: Padder<N>,
 {
-    fn new(cipher: C, padder: P) -> Self {
-        todo!()
+    fn new(rng: R, cipher: C, padder: P) -> Self {
+        Cbc {
+            rng,
+            cipher,
+            padder,
+            _marker: marker::PhantomData,
+        }
     }
+}
 
-    fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<Block<N>> {
-        let mut prev_ciphertext = GenericArray::default(); // FIXME: naming. should be called block as well
-        prev_ciphertext.copy_from_slice(&self.iv);
+impl<N, R, C, P> BlockMode<N, C, P> for Cbc<N, R, C, P>
+where
+    N: ArrayLength<u8>,
+    R: RngCore,
+    C: BlockCipher<N>,
+    P: Padder<N>,
+{
+    fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<u8> {
+        let mut iv = vec![0u8; N::to_usize()];
+        self.rng.fill_bytes(iv.as_mut_slice());
+        let mut prev_ciphertext = GenericArray::clone_from_slice(iv.as_slice());
 
         let ciphertext_blocks = self
             .padder
             .pad(plaintext)
-            .iter()
+            .into_iter()
             .map(|plaintext_block| {
-                let plaintext_block = plaintext_block.clone().into_iter(); // FIXME: cloning GenericArray to satisfy borrow checker on VernamCipher
-                let prev_ciphertext_block = prev_ciphertext.into_iter();
-                let xord_plaintext_block =
-                    VernamCipher::new(plaintext_block, prev_ciphertext_block)
-                        .collect::<Result<Vec<u8>, VernamCipherError>>()
-                        .unwrap(); // TODO: possibly change error type or provide SAFETY annotation
+                let a = prev_ciphertext.clone().into_iter();
+                let b = plaintext_block.into_iter();
+                let xor = VernamCipher::new(b, a)
+                    .collect::<Result<Vec<u8>, VernamCipherError>>()
+                    .unwrap(); // TODO: possibly change error type or provide SAFETY annotation
 
-                let mut xord_plaintext_generic_block: Block<N> = GenericArray::default(); // TODO: look into generic_array's API, see if there's a more idiomatic way of doing this
-                xord_plaintext_generic_block.copy_from_slice(&xord_plaintext_block);
+                let encrypted_block = self
+                    .cipher
+                    .encrypt_block(GenericArray::clone_from_slice(&xor));
+                prev_ciphertext = encrypted_block.clone();
 
-                let ciphertext_block = self.cipher.encrypt_block(xord_plaintext_generic_block);
-                prev_ciphertext = ciphertext_block;
-
-                ciphertext_block
+                encrypted_block
             })
+            .flat_map(|b| b.as_slice().to_vec())
             .collect();
 
         ciphertext_blocks
     }
 
-    fn decrypt(&mut self, ciphertext: Vec<Block<N>>) -> Vec<u8> {
-        let mut prev_ciphertext = GenericArray::default();
-        prev_ciphertext.copy_from_slice(&self.iv);
+    fn decrypt(&mut self, ciphertext: Vec<u8>) -> Vec<u8> {
+        todo!()
+        // let mut prev_ciphertext = GenericArray::default();
+        // prev_ciphertext.copy_from_slice(&self.iv);
 
-        let plaintext_blocks = ciphertext
-            .into_iter()
-            .map(|b| {
-                let diffused_plaintext_block = self.cipher.decrypt_block(b);
-                let undiffused_plaintext_block = VernamCipher::new(
-                    diffused_plaintext_block.clone().into_iter(),
-                    prev_ciphertext.clone().into_iter(),
-                )
-                .collect::<Result<Vec<u8>, VernamCipherError>>()
-                .unwrap();
+        // let plaintext_blocks = ciphertext
+        //     .chunks_exact(N::to_usize())
+        //     .map(|chunk| GenericArray::clone_from_slice(chunk))
+        //     .map(|b| {
+        //         let diffused_plaintext_block = self.cipher.decrypt_block(b);
+        //         let undiffused_plaintext_block = VernamCipher::new(
+        //             diffused_plaintext_block.clone().into_iter(),
+        //             prev_ciphertext.clone().into_iter(),
+        //         )
+        //         .collect::<Result<Vec<u8>, VernamCipherError>>()
+        //         .unwrap();
 
-                prev_ciphertext = b;
+        //         prev_ciphertext = b;
 
-                undiffused_plaintext_block
-            })
-            .flat_map(|plaintext_block| plaintext_block)
-            .collect();
+        //         undiffused_plaintext_block
+        //     })
+        //     .flat_map(|plaintext_block| plaintext_block)
+        //     .collect();
 
-        plaintext_blocks
+        // plaintext_blocks
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::SeedableRng;
+
+    use super::*;
+    use crate::{
+        cipher::block::{ciphers, pads},
+        rng::MT,
+    };
+
+    #[test]
+    fn test_encrypt_one_block() {
+        let seed = 1131464071u32;
+        let rng = MT::from_seed(seed.to_be_bytes());
+
+        let key = b"YELLOW SUBMARINE";
+        let cipher = ciphers::aes::Aes::new(key.to_vec());
+        let padder = pads::pkcs7::Pkcs7::new();
+
+        let mut cbc = Cbc::new(rng, cipher, padder);
+
+        let plaintext = b"ABCDEFGHIJKLMNOP";
+        let encrypted = cbc.encrypt(plaintext.to_vec());
+
+        println!("{:?}", encrypted);
+        // #[rustfmt::skip]
+        // let expected_output = [
+        //     0xf5, 0x45, 0xc0, 0x06,
+        //     0x06, 0x91, 0x26, 0xd9,
+        //     0xc0, 0xf9, 0x3f, 0xa7,
+        //     0xdd, 0x89, 0xab, 0x98,
+        //     // encrypted padding (entire block)
+        //     0x60, 0xfa, 0x36, 0x70,
+        //     0x7e, 0x45, 0xf4, 0x99,
+        //     0xdb, 0xa0, 0xf2, 0x5b,
+        //     0x92, 0x23, 0x01, 0xa5,
+        // ];
+
+        // assert_eq!(encrypted, expected_output);
     }
 }

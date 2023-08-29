@@ -1,9 +1,17 @@
 use super::ciphers::BlockCipher;
 use super::pads::Padder;
-use super::Block;
 
-// pub mod cbc;
-pub mod ecb;
+mod cbc;
+mod cfb;
+mod ctr;
+mod ecb;
+mod ofb;
+
+pub use cbc::*;
+pub use cfb::*;
+pub use ctr::*;
+pub use ecb::*;
+pub use ofb::*;
 
 /// `BlockMode` is a trait representing a mode of operation for block ciphers.
 ///
@@ -33,7 +41,6 @@ where
     C: BlockCipher<N>,
     P: Padder<N>,
 {
-    fn new(cipher: C, padder: P) -> Self;
     fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<u8>;
     fn decrypt(&mut self, ciphertext: Vec<u8>) -> Vec<u8>;
 }

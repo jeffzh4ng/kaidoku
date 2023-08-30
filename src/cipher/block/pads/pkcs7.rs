@@ -46,11 +46,7 @@ impl<N: ArrayLength<u8>> Padder<N> for Pkcs7 {
         byte_stream.resize(byte_stream.len() + padding, padding as u8); // TODO: constrain max block size is 256
         byte_stream
             .chunks_exact(block_size)
-            .map(|chunk| {
-                let mut block = GenericArray::default();
-                block.copy_from_slice(chunk);
-                block
-            })
+            .map(|chunk| GenericArray::clone_from_slice(chunk))
             .collect()
     }
 
@@ -91,7 +87,9 @@ mod tests {
         let plaintext = vec![0u8; 10]; // less than one block (80 bits)
         let padder = Pkcs7 {};
         let padded: Vec<GenericArray<u8, typenum::U16>> = padder.pad(plaintext);
-        assert_eq!(padded.len(), 1); // should have one block now
+
+        // should have one block now
+        assert_eq!(padded.len(), 1);
 
         // last 6 bytes of the block should be padding
         assert_eq!(

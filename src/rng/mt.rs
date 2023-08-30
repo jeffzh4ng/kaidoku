@@ -150,8 +150,7 @@ mod tests {
     #[test]
     fn known_answer_test() {
         let seed = 1131464071u32;
-        let seed_bytes = seed.to_be_bytes();
-        let mut mt = MT::from_seed(seed_bytes);
+        let mut mt = MT::from_seed(seed.to_be_bytes());
 
         let path = path::Path::new("./tests/data/mt_test_vector_1131464071.txt");
         let file = fs::File::open(path).unwrap();

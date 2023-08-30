@@ -1,7 +1,7 @@
 use std::{path, thread};
 
 use ::rand::prelude::*;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 // ROADMAP:
@@ -100,45 +100,45 @@ fn main() -> Result<()> {
     "
     );
 
-    let cli = Cli::parse();
-    match &cli.command {
-        Some(Commands::Encrypt {
-            input,
-            encoding,
-            protocol,
-            output,
-        }) => {
-            println!("encrypt");
-            let plaintext =
-                "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
-            let key = "ICE";
+    // let cli = Cli::parse();
+    // match &cli.command {
+    //     Some(Commands::Encrypt {
+    //         input,
+    //         encoding,
+    //         protocol,
+    //         output,
+    //     }) => {
+    //         println!("encrypt");
+    //         let plaintext =
+    //             "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
+    //         let key = "ICE";
 
-            let ciphertext = kaidoku::cipher::stream::vernam_cipher_with_key(plaintext, key)
-                .collect::<Result<Vec<u8>, kaidoku::cipher::stream::VernamCipherError>>()
-                .context("unable to encrypt plaintext")?;
-            // .unwrap()
-            // .into_iter();
-        }
-        Some(Commands::Decrypt {
-            input,
-            encoding,
-            protocol,
-            output,
-        }) => {
-            println!("decrypt");
-        }
-        Some(Commands::GenerateKey { protocol, output }) => {
-            println!("generate key");
-        }
-        None => {
-            test_runner();
-        }
-    };
+    //         let ciphertext = kaidoku::cipher::stream::vernam_cipher_with_key(plaintext, key)
+    //             .collect::<Result<Vec<u8>, kaidoku::cipher::stream::VernamCipherError>>()
+    //             .context("unable to encrypt plaintext")?;
+    //         // .unwrap()
+    //         // .into_iter();
+    //     }
+    //     Some(Commands::Decrypt {
+    //         input,
+    //         encoding,
+    //         protocol,
+    //         output,
+    //     }) => {
+    //         println!("decrypt");
+    //     }
+    //     Some(Commands::GenerateKey { protocol, output }) => {
+    //         println!("generate key");
+    //     }
+    //     None => {
+    //         test_runner();
+    //     }
+    // };
 
     Ok(())
 }
 
-fn test_runner() {
+fn _test_runner() {
     // ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____
     // ||S |||T |||R |||E |||A |||M |||       |||C |||I |||P |||H |||E |||R |||S ||
     // ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||

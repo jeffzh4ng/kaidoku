@@ -115,8 +115,8 @@ impl BlockCipher<U16> for Aes {
         encrypted_block
     }
 
-    fn decrypt_block(&self, block: Block<U16>) -> Block<U16> {
-        todo!()
+    fn decrypt_block(&self, _block: Block<U16>) -> Block<U16> {
+        unimplemented!()
     }
 }
 

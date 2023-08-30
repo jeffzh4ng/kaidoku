@@ -29,7 +29,7 @@ where
     C: BlockCipher<N>,
     P: Padder<N>,
 {
-    fn new(rng: R, cipher: C, padder: P) -> Self {
+    pub fn new(rng: R, cipher: C, padder: P) -> Self {
         Cbc {
             rng,
             cipher,
@@ -75,8 +75,9 @@ where
         ciphertext_blocks
     }
 
-    fn decrypt(&mut self, ciphertext: Vec<u8>) -> Vec<u8> {
-        todo!()
+    fn decrypt(&mut self, _ciphertext: Vec<u8>) -> Vec<u8> {
+        unimplemented!()
+
         // let mut prev_ciphertext = GenericArray::default();
         // prev_ciphertext.copy_from_slice(&self.iv);
 

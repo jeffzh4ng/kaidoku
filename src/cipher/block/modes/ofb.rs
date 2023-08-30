@@ -49,8 +49,8 @@ where
     fn encrypt(&mut self, plaintext: Vec<u8>) -> Vec<u8> {
         let mut iv = vec![0u8; N::to_usize()];
         self.rng.fill_bytes(iv.as_mut_slice());
-
         let mut prev_output = GenericArray::clone_from_slice(iv.as_slice());
+
         let ciphertext_blocks = self
             .padder
             .pad(plaintext) // padding the plaintext even though OFB is a stream cipher

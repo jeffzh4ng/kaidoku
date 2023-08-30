@@ -29,8 +29,10 @@ pub use ofb::*;
 /// but do not provide protection against accidental or malicious tampering
 /// of payloads, also known as *integrity*.
 ///
-/// ECB: Y_i = F(P_i, K)
-/// CBC: Y_i = P_i XOR C_(i-1)
+/// ECB: C_i = encrypt_block(P_i, K)
+/// CBC: C_i = encrypt_block(P_i XOR C_{i-1}, K), C_0 = IV
+/// OFB: C_i = P_i XOR S_i, S_i = encrypt_block(S_{i-1}, K), S_0 = IV
+/// CFB: Y_i = P_i XOR S_i, S_i = encrypt_block(C_{i-1}, K), C_0 = IV
 ///
 /// Callers with systems that require authentication on top of secrecy
 /// should used AEAD (authenticated encryption with additional data) schemes such

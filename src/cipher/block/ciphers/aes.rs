@@ -14,58 +14,11 @@ enum KeyLength {
     Length256 = 256,
 }
 
-// AES is based on a design principle known as a substitution–permutation network,
-// and is efficient in both software and hardware. Unlike its predecessor DES,
-// AES does not use a Feistel network. AES is a variant of Rijndael, with a fixed
-// block size of 128 bits, and a key size of 128, 192, or 256 bits.
-
-// By contrast, Rijndael per se is specified with block and key sizes that may be
-// any multiple of 32 bits, with a minimum of 128 and a maximum of 256 bits. Most
-// AES calculations are done in a particular finite field.
-
-// AES operates on a 4 × 4 column-major order array of 16 bytes b0, b1, ..., b15
-// termed the state.
-
-// =============================================================================
-// High-level description of the algorithm
-// =============================================================================
-// 1. KeyExpansion – round keys are derived from the cipher key using the AES key
-// schedule. AES requires a separate 128-bit round key block for each round plus one more.
-
-// 2. Initial round key addition:
-// AddRoundKey – each byte of the state is combined with a byte of the round key
-//               using bitwise xor.
-
-// 3. Rounds (9, 11 or 13)
-// ---1. SubBytes – a non-linear substitution step where each byte is replaced
-//                  with another according to a lookup table.
-// ---2. ShiftRows – a transposition step where the last three rows of the state
-//                   are shifted cyclically a certain number of steps.
-// ---3. MixColumns – a linear mixing operation which operates on the columns of
-//                    the state, combining the four bytes in each column.
-// ---4. AddRoundKey
-
-// 4. Final round (making 10, 12 or 14 rounds in total):
-// ---1. SubBytes
-// ---2. ShiftRows
-// ---3. AddRoundKey
-
-// =============================================================================
-// Algorithm security
-// =============================================================================
-
-// According to NSA,
-// The design and strength of all key lengths of the AES algorithm (i.e., 128, 192 and 256)
-// are sufficient to protect classified information up to the SECRET level.
-// TOP SECRET information will require use of either the 192 or 256 key lengths.
-// The implementation of AES in products intended to protect national security
-// systems and/or information must be reviewed and certified by NSA prior to their
-// acquisition and use.
-
-// By 2006, the best known attacks were on 7 rounds for 128-bit keys, 8 rounds
-// for 192-bit keys, and 9 rounds for 256-bit keys.
-// see more: https://www.schneier.com/academic/archives/2001/01/improved_cryptanalys.html
-
+// Aes implements BlockCipher for the Advanced Encryption Standard
+// formerly known as Rijndael, as defined in the U.S. Federal Information
+// Processing Standards Publication 197. The implementation's conformance is
+// verified from the National Institute of Standards and Technology's AES Algorithm
+// Validaton Suite.
 pub struct Aes {
     key: Vec<u8>,
     key_length: KeyLength,
@@ -86,8 +39,23 @@ impl BlockCipher<U16> for Aes {
         Aes { key, key_length }
     }
 
+    // AES is based on a design principle known as a substitution–permutation network,
+    // and is efficient in both software and hardware. Unlike its predecessor DES,
+    // AES does not use a Feistel network. AES is a variant of Rijndael, with a fixed
+    // block size of 128 bits, and a key size of 128, 192, or 256 bits.
+
+    // By contrast, Rijndael per se is specified with block and key sizes that may be
+    // any multiple of 32 bits, with a minimum of 128 and a maximum of 256 bits. Most
+    // AES calculations are done in a particular finite field.
+
+    // AES operates on a 4 × 4 column-major order array of 16 bytes b0, b1, ..., b15
+    // termed the state.
     fn encrypt_block(&self, block: Block<U16>) -> Block<U16> {
-        // 1. key expansion
+        // =============================================================================
+        // High-level description of the algorithm
+        // =============================================================================
+        // 1. KeyExpansion – round keys are derived from the cipher key using the AES key
+        // schedule. AES requires a separate 128-bit round key block for each round plus one more.
         let rounds = match self.key_length {
             KeyLength::Length128 => 10,
             KeyLength::Length192 => 12,
@@ -95,11 +63,22 @@ impl BlockCipher<U16> for Aes {
         };
         let round_keys = self.key_expansion(rounds);
 
-        // 2. initial round key addition
+        // 2. Initial round key addition:
+        // AddRoundKey – each byte of the state is combined with a byte of the round key
+        //               using bitwise xor.
+
         let mut encrypted_block = block;
         encrypted_block = self.add_round_key(encrypted_block, round_keys[0]);
 
-        // 3. round ranges from 1..[9, 11, or 13]
+        // 3. Rounds (9, 11 or 13)
+        // ---1. SubBytes – a non-linear substitution step where each byte is replaced
+        //                  with another according to a lookup table.
+        // ---2. ShiftRows – a transposition step where the last three rows of the state
+        //                   are shifted cyclically a certain number of steps.
+        // ---3. MixColumns – a linear mixing operation which operates on the columns of
+        //                    the state, combining the four bytes in each column.
+        // ---4. AddRoundKey
+
         for round in 1..rounds {
             encrypted_block = self.sub_bytes(encrypted_block);
             encrypted_block = self.shift_rows(encrypted_block);
@@ -107,7 +86,10 @@ impl BlockCipher<U16> for Aes {
             encrypted_block = self.add_round_key(encrypted_block, round_keys[round]);
         }
 
-        // 4. final round (making 10, 12, or 14 rounds total)
+        // 4. Final round (making 10, 12 or 14 rounds in total):
+        // ---1. SubBytes
+        // ---2. ShiftRows
+        // ---3. AddRoundKey
         encrypted_block = self.sub_bytes(encrypted_block);
         encrypted_block = self.shift_rows(encrypted_block);
         encrypted_block = self.add_round_key(encrypted_block, round_keys[rounds]);

@@ -10,8 +10,6 @@ pub struct Des {
     key: [u8; 64],
 }
 
-const SHIFTS: [u8; 16] = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
-
 impl BlockCipher<U8> for Des {
     fn new(key: Vec<u8>) -> Self {
         if key.len() != 56 {
@@ -78,6 +76,8 @@ impl Des {
         output
     }
 }
+
+const SHIFTS: [u8; 16] = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
 
 #[rustfmt::skip]
 const PC1: [u8; 56] = [

@@ -22,7 +22,6 @@ use clap::{Parser, Subcommand};
 // API:
 // - offer macros
 // - lazy block ciphers?
-// - block mode traits (parallelizable, random read)
 // - cli: files, stdin
 
 // INTERNAL:

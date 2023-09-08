@@ -51,9 +51,6 @@ impl BlockCipher<U16> for Aes {
     // AES operates on a 4 × 4 column-major order array of 16 bytes b0, b1, ..., b15
     // termed the state.
     fn encrypt_block(&self, block: Block<U16>) -> Block<U16> {
-        // =============================================================================
-        // High-level description of the algorithm
-        // =============================================================================
         // 1. KeyExpansion – round keys are derived from the cipher key using the AES key
         // schedule. AES requires a separate 128-bit round key block for each round plus one more.
         let rounds = match self.key_length {
@@ -77,7 +74,6 @@ impl BlockCipher<U16> for Aes {
         // ---3. MixColumns – a linear mixing operation which operates on the columns of
         //                    the state, combining the four bytes in each column.
         // ---4. AddRoundKey
-
         for r in 1..rounds {
             encrypted_block = self.sub_bytes(encrypted_block);
             encrypted_block = self.shift_rows(encrypted_block);
@@ -161,7 +157,6 @@ impl Aes {
         while i < u32_words.len() {
             prev = u32_words[i - 1];
             if i % words_per_key_size == 0 {
-                // TODO why -1?
                 prev = self.sub_word(prev.rotate_left(8)) ^ RCON[i / words_per_key_size];
             } else if words_per_key_size > 6 && i % words_per_key_size == 4 {
                 prev = self.sub_word(prev);
